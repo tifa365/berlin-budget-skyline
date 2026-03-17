@@ -178,6 +178,7 @@ function createShootingStar(scene) {
       color: 0xeaf6ff,
       transparent: true,
       opacity: 0,
+      linewidth: 1,
       depthWrite: false,
       fog: false,
       blending: THREE.AdditiveBlending,
@@ -187,23 +188,9 @@ function createShootingStar(scene) {
   trail.renderOrder = 18;
   scene.add(trail);
 
-  const head = new THREE.Sprite(
-    new THREE.SpriteMaterial({
-      color: 0xf6fbff,
-      transparent: true,
-      opacity: 0,
-      depthWrite: false,
-      fog: false,
-      blending: THREE.AdditiveBlending,
-    }),
-  );
-  head.visible = false;
-  head.renderOrder = 19;
-  scene.add(head);
-
   return {
     active: false,
-    nextStartTime: 70 + Math.random() * 150,
+    nextStartTime: 8 + Math.random() * 12,
     startTime: 0,
     duration: 0,
     start: new THREE.Vector3(),
@@ -215,7 +202,6 @@ function createShootingStar(scene) {
     viewCenter: new THREE.Vector3(),
     up: new THREE.Vector3(0, 1, 0),
     trail,
-    head,
     positions,
   };
 }
@@ -232,8 +218,7 @@ function updateShootingStar(state, camera, elapsedSeconds) {
   if (progress >= 1) {
     state.active = false;
     state.trail.visible = false;
-    state.head.visible = false;
-    state.nextStartTime = elapsedSeconds + 180 + Math.random() * 360;
+    state.nextStartTime = elapsedSeconds + 40 + Math.random() * 40;
     return;
   }
 
@@ -250,10 +235,7 @@ function updateShootingStar(state, camera, elapsedSeconds) {
   state.trail.geometry.attributes.position.needsUpdate = true;
 
   const opacity = Math.sin(progress * Math.PI);
-  state.trail.material.opacity = opacity * 0.42;
-  state.head.material.opacity = opacity * 0.75;
-  state.head.position.copy(state.headPosition);
-  state.head.scale.setScalar(55 + opacity * 45);
+  state.trail.material.opacity = opacity * 0.45;
 }
 
 function startShootingStar(state, camera, elapsedSeconds) {
@@ -269,22 +251,21 @@ function startShootingStar(state, camera, elapsedSeconds) {
 
   state.viewCenter
     .copy(camera.position)
-    .addScaledVector(state.forward, 3200 + Math.random() * 700)
-    .addScaledVector(state.up, 950 + Math.random() * 650);
+    .addScaledVector(state.forward, 3200 + Math.random() * 1200)
+    .addScaledVector(state.up, 600 + Math.random() * 500);
 
   state.start
     .copy(state.viewCenter)
-    .addScaledVector(state.lateral, side * (850 + Math.random() * 800))
-    .addScaledVector(state.up, 250 + Math.random() * 300);
+    .addScaledVector(state.lateral, side * (1200 + Math.random() * 1100))
+    .addScaledVector(state.up, 320 + Math.random() * 420);
 
   state.end
     .copy(state.viewCenter)
-    .addScaledVector(state.lateral, -side * (550 + Math.random() * 900))
-    .addScaledVector(state.up, -180 - Math.random() * 240);
+    .addScaledVector(state.lateral, -side * (900 + Math.random() * 1300))
+    .addScaledVector(state.up, -120 - Math.random() * 220);
 
   state.active = true;
   state.startTime = elapsedSeconds;
   state.duration = 0.9 + Math.random() * 0.7;
   state.trail.visible = true;
-  state.head.visible = true;
 }
