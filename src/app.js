@@ -108,16 +108,17 @@ requestAnimationFrame(() => {
     sceneState.renderer.domElement.addEventListener("pointerup", (event) => {
       const moved =
         Math.hypot(event.clientX - pointerDownX, event.clientY - pointerDownY) > 6;
-      if (moved || cameraController.movedSinceDown()) {
+      if (moved) {
         return;
       }
 
       updatePointer(event);
       const index = pickBuilding();
-      if (index >= 0) {
+      if (index >= 0 && index !== selectedIndex) {
         selectBuilding(index);
-      } else {
+      } else if (selectedIndex >= 0) {
         clearSelection();
+        setTimeout(() => cameraController.reset(), 1000);
       }
     });
 
