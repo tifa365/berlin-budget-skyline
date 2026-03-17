@@ -77,9 +77,11 @@ function createUrbanBase(model) {
 
   const sidewalkGeometry = new THREE.PlaneGeometry(1, 1);
   const sidewalkMaterial = new THREE.MeshStandardMaterial({
-    color: THEME.sidewalk,
-    roughness: 0.92,
-    metalness: 0.02,
+    color: 0x050505,
+    roughness: 1,
+    metalness: 0,
+    transparent: true,
+    opacity: 0.72,
   });
   const sidewalks = new THREE.InstancedMesh(
     sidewalkGeometry,
@@ -113,7 +115,7 @@ function createUrbanBase(model) {
   const ring = new THREE.Mesh(
     new THREE.TorusGeometry(4300, 100, 8, 64),
     new THREE.MeshBasicMaterial({
-      color: 0x17314b,
+      color: 0x050505,
       transparent: true,
       opacity: 0.11,
       depthWrite: false,

@@ -75,11 +75,6 @@ function addGround(scene) {
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -2;
   scene.add(ground);
-
-  const grid = new THREE.GridHelper(12000, 180, THEME.grid, 0x13254f);
-  grid.material.transparent = true;
-  grid.material.opacity = 0.45;
-  scene.add(grid);
 }
 
 function addSky(scene) {
