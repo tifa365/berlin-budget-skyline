@@ -284,6 +284,7 @@ export function createFacadeMaterial(geometry, buildings) {
 
         float lit = step(hash12(cellId + vec2(seed * 0.071, seed * 0.117)), occupancy);
         float heightWash = smoothstep(0.0, 1.0, height);
+        float rootFade = smoothstep(0.06, 0.18, uv.y);
         float accentWash = max(verticalAccent * 0.56, horizontalAccent * 0.44) + crownBand * 0.4;
         float faceEdge = 1.0 - smoothstep(
           0.024,
@@ -318,11 +319,11 @@ export function createFacadeMaterial(geometry, buildings) {
         float tracerMask =
           faceEdge * (0.68 + crownBand * 0.22) +
           cellEdge * (0.07 + accentWash * 0.22 + lit * windowMask * 0.15);
-        facadeColor += neonTraceColor * tracerMask * 0.42;
-        facadeColor += facadeAccent * verticalAccent * 0.06;
-        facadeColor += facadeAccent * horizontalAccent * 0.05;
+        facadeColor += neonTraceColor * tracerMask * 0.42 * rootFade;
+        facadeColor += facadeAccent * verticalAccent * 0.06 * rootFade;
+        facadeColor += facadeAccent * horizontalAccent * 0.05 * rootFade;
         facadeColor += facadeAccent * crownBand * crown * 0.08;
-        facadeColor += litWindowColor * lit * windowMask * (0.08 + accentWash * 0.06);
+        facadeColor += litWindowColor * lit * windowMask * (0.08 + accentWash * 0.06) * rootFade;
 
         vec2 roofGrid = floor(uv * (4.0 + floor(variation * 5.0)));
         float roofNoise = hash12(roofGrid + vec2(seed * 0.23, seed * 0.29));
@@ -335,11 +336,12 @@ export function createFacadeMaterial(geometry, buildings) {
         vec3 lightDir = normalize(vec3(0.35, 0.92, 0.45));
         float diffuse = max(dot(normal, lightDir), 0.0);
         float skyLight = dot(normal, vec3(0.0, 1.0, 0.0)) * 0.5 + 0.5;
+        float glowMask = mix(rootFade, 1.0, roofMask);
 
         color *= 0.24 + diffuse * 0.18 + skyLight * 0.08;
-        color += neonTraceColor * faceEdge * (0.28 + crownBand * 0.14);
-        color += facadeAccent * (verticalAccent * 0.1 + horizontalAccent * 0.08);
-        color += litWindowColor * lit * windowMask * (0.1 + crownBand * 0.08);
+        color += neonTraceColor * faceEdge * (0.28 + crownBand * 0.14) * glowMask;
+        color += facadeAccent * (verticalAccent * 0.1 + horizontalAccent * 0.08) * glowMask;
+        color += litWindowColor * lit * windowMask * (0.1 + crownBand * 0.08) * glowMask;
 
         float fogFactor = smoothstep(uFogNear, uFogFar, vColorC.y);
         color = mix(color, uFogColor, fogFactor);
