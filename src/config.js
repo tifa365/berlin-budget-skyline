@@ -33,13 +33,13 @@ export const LAYOUT_CONFIG = {
 };
 
 export const THEME = {
-  background: 0x02040b,
-  fog: 0x040813,
-  ground: 0x010101,
+  background: 0x000000,
+  fog: 0x010103,
+  ground: 0x000000,
   grid: 0xff7a45,
-  park: 0x07180f,
-  sidewalk: 0x030303,
-  lowBuilding: 0x07111f,
+  park: 0x030805,
+  sidewalk: 0x010101,
+  lowBuilding: 0x03070d,
   highBuilding: 0x5ae0ff,
   highlight: 0xc3efff,
   glow: 0x69c4ff,

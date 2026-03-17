@@ -5,7 +5,7 @@ const { THREE } = window;
 export function createScene(stageElement) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(THEME.background);
-  scene.fog = new THREE.Fog(THEME.fog, 900, 6200);
+  scene.fog = new THREE.Fog(THEME.fog, 760, 5200);
 
   const camera = new THREE.PerspectiveCamera(50, 1, 1, 10000);
   camera.position.set(1200, 900, 1200);
@@ -17,7 +17,7 @@ export function createScene(stageElement) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1;
+  renderer.toneMappingExposure = 0.9;
   stageElement.appendChild(renderer.domElement);
 
   addLights(scene);
@@ -49,17 +49,17 @@ export function createScene(stageElement) {
 }
 
 function addLights(scene) {
-  scene.add(new THREE.AmbientLight(0x13274a, 0.52));
+  scene.add(new THREE.AmbientLight(0x060912, 0.24));
 
-  const keyLight = new THREE.DirectionalLight(0x6ec9ff, 1.08);
+  const keyLight = new THREE.DirectionalLight(0x5d92d0, 0.76);
   keyLight.position.set(900, 1300, 500);
   scene.add(keyLight);
 
-  const rimLight = new THREE.DirectionalLight(0xff5fa8, 0.42);
+  const rimLight = new THREE.DirectionalLight(0xb13769, 0.2);
   rimLight.position.set(-1200, 680, -900);
   scene.add(rimLight);
 
-  const skyLight = new THREE.HemisphereLight(0x224b86, 0x02040b, 0.34);
+  const skyLight = new THREE.HemisphereLight(0x0a1020, 0x000000, 0.12);
   scene.add(skyLight);
 }
 
@@ -83,11 +83,11 @@ function addSky(scene) {
   canvas.height = 512;
   const context = canvas.getContext("2d");
   const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
-  gradient.addColorStop(0, "#010208");
-  gradient.addColorStop(0.22, "#040817");
-  gradient.addColorStop(0.48, "#0d1836");
-  gradient.addColorStop(0.68, "#1b1230");
-  gradient.addColorStop(1, "#03050b");
+  gradient.addColorStop(0, "#000000");
+  gradient.addColorStop(0.24, "#010103");
+  gradient.addColorStop(0.52, "#04070f");
+  gradient.addColorStop(0.72, "#08070d");
+  gradient.addColorStop(1, "#010101");
   context.fillStyle = gradient;
   context.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -136,11 +136,11 @@ function addSky(scene) {
   const stars = new THREE.Points(
     starGeometry,
     new THREE.PointsMaterial({
-      size: 2.4,
+      size: 1.9,
       sizeAttenuation: false,
       vertexColors: true,
       transparent: true,
-      opacity: 0.95,
+      opacity: 0.8,
       depthWrite: false,
       fog: false,
     }),
@@ -150,9 +150,9 @@ function addSky(scene) {
   const glow = new THREE.Mesh(
     new THREE.TorusGeometry(3600, 260, 12, 64),
     new THREE.MeshBasicMaterial({
-      color: 0x2a79d4,
+      color: 0x16304b,
       transparent: true,
-      opacity: 0.14,
+      opacity: 0.05,
       depthWrite: false,
       side: THREE.DoubleSide,
     }),

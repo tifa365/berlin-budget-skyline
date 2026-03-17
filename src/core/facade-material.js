@@ -292,17 +292,20 @@ export function createFacadeMaterial(geometry, buildings) {
           min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y))
         );
         float facadeTopEdge = (1.0 - smoothstep(0.024, 0.11, 1.0 - uv.y)) * smoothstep(0.72, 0.96, uv.y);
+        float facadeCornerEdge =
+          (1.0 - smoothstep(0.018, 0.075, min(uv.x, 1.0 - uv.x))) *
+          smoothstep(0.08, 0.24, uv.y);
         float cellEdge = 1.0 - smoothstep(
           0.035,
           0.2,
           min(min(cellUv.x, 1.0 - cellUv.x), min(cellUv.y, 1.0 - cellUv.y))
         );
 
-        vec3 wallColor = mix(vec3(0.008, 0.012, 0.028), facadeBase * 0.38, 0.52);
-        wallColor *= 0.88 + (hash12(cellId + vec2(seed * 0.09, seed * 0.19)) - 0.5) * 0.06;
-        wallColor += facadeAccent * (0.008 + heightWash * 0.012);
+        vec3 wallColor = mix(vec3(0.003, 0.004, 0.012), facadeBase * 0.22, 0.34);
+        wallColor *= 0.84 + (hash12(cellId + vec2(seed * 0.09, seed * 0.19)) - 0.5) * 0.05;
+        wallColor += facadeAccent * (0.003 + heightWash * 0.005);
 
-        vec3 offWindowColor = mix(vec3(0.006, 0.009, 0.024), facadeBase * 0.12, 0.3);
+        vec3 offWindowColor = mix(vec3(0.003, 0.004, 0.011), facadeBase * 0.08, 0.18);
         vec3 litWindowColor = mix(
           facadeWindow,
           facadeAccent,
@@ -319,18 +322,19 @@ export function createFacadeMaterial(geometry, buildings) {
 
         float tracerMask =
           facadeTopEdge * (0.32 + crownBand * 0.28) +
+          facadeCornerEdge * (0.12 + crownBand * 0.08) +
           cellEdge * (0.07 + accentWash * 0.22 + lit * windowMask * 0.15);
-        facadeColor += neonTraceColor * tracerMask * 0.42 * rootFade;
-        facadeColor += facadeAccent * verticalAccent * 0.06 * rootFade;
-        facadeColor += facadeAccent * horizontalAccent * 0.05 * rootFade;
+        facadeColor += neonTraceColor * tracerMask * 0.34 * rootFade;
+        facadeColor += facadeAccent * verticalAccent * 0.04 * rootFade;
+        facadeColor += facadeAccent * horizontalAccent * 0.03 * rootFade;
         facadeColor += facadeAccent * crownBand * crown * 0.08;
         facadeColor += litWindowColor * lit * windowMask * (0.08 + accentWash * 0.06) * rootFade;
 
         vec2 roofGrid = floor(uv * (4.0 + floor(variation * 5.0)));
         float roofNoise = hash12(roofGrid + vec2(seed * 0.23, seed * 0.29));
-        vec3 roofColor = mix(vec3(0.008, 0.012, 0.024), facadeBase * 0.28, 0.46);
-        roofColor += neonTraceColor * roofEdge * (0.26 + crown * 0.18);
-        roofColor += step(0.82, roofNoise) * facadeAccent * (0.08 + crown * 0.18);
+        vec3 roofColor = mix(vec3(0.003, 0.005, 0.012), facadeBase * 0.18, 0.28);
+        roofColor += neonTraceColor * roofEdge * (0.18 + crown * 0.14);
+        roofColor += step(0.82, roofNoise) * facadeAccent * (0.05 + crown * 0.12);
 
         vec3 color = mix(facadeColor, roofColor, roofMask);
 
@@ -338,12 +342,12 @@ export function createFacadeMaterial(geometry, buildings) {
         float diffuse = max(dot(normal, lightDir), 0.0);
         float skyLight = dot(normal, vec3(0.0, 1.0, 0.0)) * 0.5 + 0.5;
         float glowMask = mix(rootFade, 1.0, roofMask);
-        float outlineGlow = mix(facadeTopEdge, roofEdge, roofMask);
+        float outlineGlow = mix(max(facadeTopEdge, facadeCornerEdge * 0.85), roofEdge, roofMask);
 
-        color *= 0.24 + diffuse * 0.18 + skyLight * 0.08;
-        color += neonTraceColor * outlineGlow * (0.24 + crownBand * 0.14) * glowMask;
-        color += facadeAccent * (verticalAccent * 0.1 + horizontalAccent * 0.08) * glowMask;
-        color += litWindowColor * lit * windowMask * (0.1 + crownBand * 0.08) * glowMask;
+        color *= 0.14 + diffuse * 0.12 + skyLight * 0.04;
+        color += neonTraceColor * outlineGlow * (0.18 + crownBand * 0.12) * glowMask;
+        color += facadeAccent * (verticalAccent * 0.05 + horizontalAccent * 0.04) * glowMask;
+        color += litWindowColor * lit * windowMask * (0.12 + crownBand * 0.1) * glowMask;
 
         float fogFactor = smoothstep(uFogNear, uFogFar, vColorC.y);
         color = mix(color, uFogColor, fogFactor);
