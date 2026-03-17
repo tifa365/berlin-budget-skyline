@@ -89,7 +89,8 @@ export function createCameraController({ camera, domElement }) {
   function update(deltaSeconds) {
     idleSeconds += deltaSeconds;
     if (!dragging && idleSeconds > 4) {
-      targetTheta -= deltaSeconds * 0.08;
+      const rotateSpeed = 0.022 * (CAMERA_CONFIG.distance / distance);
+      targetTheta -= deltaSeconds * rotateSpeed;
     }
 
     theta += (targetTheta - theta) * 0.12;
