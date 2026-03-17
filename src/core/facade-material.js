@@ -1,6 +1,7 @@
 import { THEME } from "../config.js";
 
 const { THREE } = window;
+const MAX_RARE_WINDOW_EVENTS = 16;
 
 const PALETTES = [
   { window: 0xcbe5ff, accent: 0x79b8ff, baseHue: 0.6, sat: 0.28, dark: 0.1, light: 0.23 },
@@ -174,6 +175,19 @@ export function createFacadeMaterial(geometry, buildings) {
       uFogColor: { value: new THREE.Color(THEME.fog) },
       uFogNear: { value: 900 },
       uFogFar: { value: 6200 },
+      uTime: { value: 0 },
+      uRareWindowEvents: {
+        value: Array.from(
+          { length: MAX_RARE_WINDOW_EVENTS },
+          () => new THREE.Vector4(-1, -1, -1, -1),
+        ),
+      },
+      uRareWindowStarted: {
+        value: new Float32Array(MAX_RARE_WINDOW_EVENTS).fill(-1),
+      },
+      uRareWindowMode: {
+        value: new Float32Array(MAX_RARE_WINDOW_EVENTS).fill(0),
+      },
     },
     vertexShader: `
       attribute vec4 aFacadeGrid;
@@ -201,9 +215,14 @@ export function createFacadeMaterial(geometry, buildings) {
       }
     `,
     fragmentShader: `
+      const int MAX_RARE_WINDOW_EVENTS = ${MAX_RARE_WINDOW_EVENTS};
       uniform vec3 uFogColor;
       uniform float uFogNear;
       uniform float uFogFar;
+      uniform float uTime;
+      uniform vec4 uRareWindowEvents[MAX_RARE_WINDOW_EVENTS];
+      uniform float uRareWindowStarted[MAX_RARE_WINDOW_EVENTS];
+      uniform float uRareWindowMode[MAX_RARE_WINDOW_EVENTS];
 
       varying vec4 vSurface;
       varying vec4 vFacadeGridData;
@@ -282,7 +301,7 @@ export function createFacadeMaterial(geometry, buildings) {
         occupancy += crownBand * crown * 0.22;
         occupancy = clamp(occupancy, 0.04, 0.98);
 
-        float lit = step(hash12(cellId + vec2(seed * 0.071, seed * 0.117)), occupancy);
+        float baseLit = step(hash12(cellId + vec2(seed * 0.071, seed * 0.117)), occupancy);
         float heightWash = smoothstep(0.0, 1.0, height);
         float rootFade = smoothstep(0.06, 0.18, uv.y);
         float accentWash = max(verticalAccent * 0.56, horizontalAccent * 0.44) + crownBand * 0.4;
@@ -312,23 +331,68 @@ export function createFacadeMaterial(geometry, buildings) {
           verticalAccent * 0.34 + horizontalAccent * 0.2 + crownBand * crown * 0.24
         );
         litWindowColor *= 1.0 + hash12(cellId.yx + vec2(seed * 0.031, seed * 0.041)) * 0.3;
+        float faceIndex = 0.0;
+        if (abs(normal.x) > 0.5) {
+          faceIndex = normal.x > 0.0 ? 0.0 : 1.0;
+        } else if (abs(normal.z) > 0.5) {
+          faceIndex = normal.z > 0.0 ? 2.0 : 3.0;
+        }
+        float rareOffFade = 0.0;
+        float rareOnFade = 0.0;
+        float rareBlinkBright = 0.0;
+        float rareBlinkDark = 0.0;
+        if (roofMask < 0.5) {
+          for (int index = 0; index < MAX_RARE_WINDOW_EVENTS; index += 1) {
+            vec4 rareEvent = uRareWindowEvents[index];
+            float eventActive = step(0.0, rareEvent.x);
+            float seedMatch = 1.0 - step(0.001, abs(seed - rareEvent.x));
+            float faceMatch = 1.0 - step(0.1, abs(faceIndex - rareEvent.y));
+            float rowWildcard = 1.0 - step(0.0, rareEvent.z);
+            float cellXMatch = max(
+              rowWildcard,
+              1.0 - step(0.1, abs(cellId.x - rareEvent.z))
+            );
+            float cellYMatch = 1.0 - step(0.1, abs(cellId.y - rareEvent.w));
+            float eventAge = max(0.0, uTime - uRareWindowStarted[index]);
+            float eventMatch = eventActive * seedMatch * faceMatch * cellXMatch * cellYMatch;
+            float eventMode = step(0.5, uRareWindowMode[index]);
+            float blinkIntro =
+              smoothstep(0.0, 0.1, eventAge) *
+              (1.0 - smoothstep(0.95, 1.45, eventAge));
+            float blinkPattern = step(0.5, fract(eventAge * 2.6));
+            float blinkDark = blinkIntro * blinkPattern;
+            float blinkBright = blinkIntro * (1.0 - blinkPattern);
+            float settle = smoothstep(1.2, 2.05, eventAge);
+            rareOffFade = max(rareOffFade, eventMatch * settle * (1.0 - eventMode));
+            rareOnFade = max(rareOnFade, eventMatch * settle * eventMode);
+            rareBlinkBright = max(rareBlinkBright, eventMatch * blinkBright);
+            rareBlinkDark = max(rareBlinkDark, eventMatch * blinkDark);
+          }
+        }
+        float emissionLife = 1.0 - rareOffFade;
+        float lit = baseLit * emissionLife;
+        lit = max(lit, rareOnFade);
+        lit = max(lit, rareBlinkBright);
+        lit *= 1.0 - rareBlinkDark * 0.82;
+        vec3 rareOffWindowColor = mix(offWindowColor, vec3(0.0, 0.0, 0.001), max(rareOffFade, rareBlinkDark * 0.45));
+        litWindowColor *= 1.0 + rareBlinkBright * 0.36 + rareOnFade * 0.16;
         vec3 neonTraceColor = mix(facadeAccent, facadeWindow, 0.36 + crownBand * 0.16);
 
         vec3 facadeColor = mix(
           wallColor,
-          mix(offWindowColor, litWindowColor, lit),
+          mix(rareOffWindowColor, litWindowColor, lit),
           windowMask
         );
 
         float tracerMask =
           facadeTopEdge * (0.32 + crownBand * 0.28) +
           facadeCornerEdge * (0.12 + crownBand * 0.08) +
-          cellEdge * (0.07 + accentWash * 0.22 + lit * windowMask * 0.15);
-        facadeColor += neonTraceColor * tracerMask * 0.34 * rootFade;
-        facadeColor += facadeAccent * verticalAccent * 0.04 * rootFade;
-        facadeColor += facadeAccent * horizontalAccent * 0.03 * rootFade;
-        facadeColor += facadeAccent * crownBand * crown * 0.08;
-        facadeColor += litWindowColor * lit * windowMask * (0.08 + accentWash * 0.06) * rootFade;
+          cellEdge * (0.07 + accentWash * 0.22 + lit * windowMask * 0.15) * mix(1.0, 0.08, rareOffFade);
+        facadeColor += neonTraceColor * tracerMask * 0.34 * rootFade * mix(1.0, 0.18, rareOffFade) * (1.0 + rareOnFade * 0.08);
+        facadeColor += facadeAccent * verticalAccent * 0.04 * rootFade * emissionLife;
+        facadeColor += facadeAccent * horizontalAccent * 0.03 * rootFade * emissionLife;
+        facadeColor += facadeAccent * crownBand * crown * 0.08 * max(emissionLife, rareOnFade);
+        facadeColor += litWindowColor * lit * windowMask * (0.08 + accentWash * 0.06) * rootFade * max(emissionLife, rareOnFade);
 
         vec2 roofGrid = floor(uv * (4.0 + floor(variation * 5.0)));
         float roofNoise = hash12(roofGrid + vec2(seed * 0.23, seed * 0.29));
@@ -345,9 +409,10 @@ export function createFacadeMaterial(geometry, buildings) {
         float outlineGlow = mix(max(facadeTopEdge, facadeCornerEdge * 0.85), roofEdge, roofMask);
 
         color *= 0.14 + diffuse * 0.12 + skyLight * 0.04;
-        color += neonTraceColor * outlineGlow * (0.18 + crownBand * 0.12) * glowMask;
-        color += facadeAccent * (verticalAccent * 0.05 + horizontalAccent * 0.04) * glowMask;
-        color += litWindowColor * lit * windowMask * (0.12 + crownBand * 0.1) * glowMask;
+        color += neonTraceColor * outlineGlow * (0.18 + crownBand * 0.12) * glowMask * mix(1.0, 0.2, rareOffFade) * (1.0 + rareOnFade * 0.08);
+        color += facadeAccent * (verticalAccent * 0.05 + horizontalAccent * 0.04) * glowMask * max(emissionLife, rareOnFade);
+        color += litWindowColor * lit * windowMask * (0.12 + crownBand * 0.1) * glowMask * max(emissionLife, rareOnFade);
+        color += litWindowColor * windowMask * rareBlinkBright * 0.1 * glowMask;
 
         float fogFactor = smoothstep(uFogNear, uFogFar, vColorC.y);
         color = mix(color, uFogColor, fogFactor);

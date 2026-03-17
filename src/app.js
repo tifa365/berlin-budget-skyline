@@ -210,6 +210,7 @@ requestAnimationFrame(() => {
       }
 
       cameraController.update(deltaSeconds);
+      city.update(now / 1000, sceneState.camera);
       sceneState.update(now / 1000);
       sceneState.renderer.render(sceneState.scene, sceneState.camera);
       requestAnimationFrame(animate);

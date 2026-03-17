@@ -35,6 +35,7 @@ export function createScene(stageElement) {
   function update(elapsedSeconds) {
     sky.stars.rotation.y = elapsedSeconds * 0.01;
     sky.glow.rotation.z = elapsedSeconds * 0.005;
+    updateShootingStar(sky.shootingStar, camera, elapsedSeconds);
   }
 
   resize();
@@ -161,5 +162,129 @@ function addSky(scene) {
   glow.position.y = 60;
   scene.add(glow);
 
-  return { stars, glow };
+  const shootingStar = createShootingStar(scene);
+
+  return { stars, glow, shootingStar };
+}
+
+function createShootingStar(scene) {
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(6);
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+
+  const trail = new THREE.Line(
+    geometry,
+    new THREE.LineBasicMaterial({
+      color: 0xeaf6ff,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      fog: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  trail.visible = false;
+  trail.renderOrder = 18;
+  scene.add(trail);
+
+  const head = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      color: 0xf6fbff,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      fog: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  head.visible = false;
+  head.renderOrder = 19;
+  scene.add(head);
+
+  return {
+    active: false,
+    nextStartTime: 70 + Math.random() * 150,
+    startTime: 0,
+    duration: 0,
+    start: new THREE.Vector3(),
+    end: new THREE.Vector3(),
+    headPosition: new THREE.Vector3(),
+    tailPosition: new THREE.Vector3(),
+    forward: new THREE.Vector3(),
+    lateral: new THREE.Vector3(),
+    viewCenter: new THREE.Vector3(),
+    up: new THREE.Vector3(0, 1, 0),
+    trail,
+    head,
+    positions,
+  };
+}
+
+function updateShootingStar(state, camera, elapsedSeconds) {
+  if (!state.active) {
+    if (elapsedSeconds < state.nextStartTime) {
+      return;
+    }
+    startShootingStar(state, camera, elapsedSeconds);
+  }
+
+  const progress = (elapsedSeconds - state.startTime) / state.duration;
+  if (progress >= 1) {
+    state.active = false;
+    state.trail.visible = false;
+    state.head.visible = false;
+    state.nextStartTime = elapsedSeconds + 180 + Math.random() * 360;
+    return;
+  }
+
+  const tailProgress = Math.max(0, progress - 0.14);
+  state.headPosition.lerpVectors(state.start, state.end, progress);
+  state.tailPosition.lerpVectors(state.start, state.end, tailProgress);
+
+  state.positions[0] = state.tailPosition.x;
+  state.positions[1] = state.tailPosition.y;
+  state.positions[2] = state.tailPosition.z;
+  state.positions[3] = state.headPosition.x;
+  state.positions[4] = state.headPosition.y;
+  state.positions[5] = state.headPosition.z;
+  state.trail.geometry.attributes.position.needsUpdate = true;
+
+  const opacity = Math.sin(progress * Math.PI);
+  state.trail.material.opacity = opacity * 0.42;
+  state.head.material.opacity = opacity * 0.75;
+  state.head.position.copy(state.headPosition);
+  state.head.scale.setScalar(55 + opacity * 45);
+}
+
+function startShootingStar(state, camera, elapsedSeconds) {
+  const side = Math.random() > 0.5 ? 1 : -1;
+
+  camera.getWorldDirection(state.forward);
+  state.lateral.crossVectors(state.forward, state.up);
+  if (state.lateral.lengthSq() < 1e-4) {
+    state.lateral.set(1, 0, 0);
+  } else {
+    state.lateral.normalize();
+  }
+
+  state.viewCenter
+    .copy(camera.position)
+    .addScaledVector(state.forward, 3200 + Math.random() * 700)
+    .addScaledVector(state.up, 950 + Math.random() * 650);
+
+  state.start
+    .copy(state.viewCenter)
+    .addScaledVector(state.lateral, side * (850 + Math.random() * 800))
+    .addScaledVector(state.up, 250 + Math.random() * 300);
+
+  state.end
+    .copy(state.viewCenter)
+    .addScaledVector(state.lateral, -side * (550 + Math.random() * 900))
+    .addScaledVector(state.up, -180 - Math.random() * 240);
+
+  state.active = true;
+  state.startTime = elapsedSeconds;
+  state.duration = 0.9 + Math.random() * 0.7;
+  state.trail.visible = true;
+  state.head.visible = true;
 }
