@@ -108,6 +108,22 @@ export function createCameraController({ camera, domElement }) {
     camera.lookAt(target);
   }
 
+  function startAtBuilding(building) {
+    const goal = new THREE.Vector3(building.x, building.height * 0.6, building.z);
+    target.copy(goal);
+    targetGoal.copy(goal);
+    const dist = clamp(
+      Math.max(building.height * 1.5, building.width * 9, building.depth * 9),
+      220,
+      800,
+    );
+    distance = dist;
+    targetDistance = dist;
+    phi = 0.85;
+    targetPhi = 0.85;
+    idleSeconds = 0;
+  }
+
   function focusBuilding(building) {
     targetGoal.set(building.x, building.height * 0.35, building.z);
     targetDistance = clamp(
@@ -131,6 +147,7 @@ export function createCameraController({ camera, domElement }) {
 
   return {
     update,
+    startAtBuilding,
     focusBuilding,
     reset,
     isDragging: () => dragging,

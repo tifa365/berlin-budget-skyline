@@ -34,10 +34,27 @@ requestAnimationFrame(() => {
     const model = buildCityModel(articles);
     const sceneState = createScene(stage);
     const city = createCityMesh(sceneState.scene, model);
+
+    // Place Lego Batman on a high (but not the highest) building
+    const batmanBuilding = model.buildings[4];
+    const loader = new THREE.GLTFLoader();
+    loader.load("./assets/models/batman/scene.gltf", (gltf) => {
+      console.log("Batman loaded", gltf);
+      const batman = gltf.scene;
+      const batmanScale = 0.3;
+      batman.scale.set(batmanScale, batmanScale, batmanScale);
+      batman.position.set(
+        batmanBuilding.x,
+        batmanBuilding.height,
+        batmanBuilding.z + batmanBuilding.depth / 2,
+      );
+      sceneState.scene.add(batman);
+    }, undefined, (err) => console.error("Batman load error", err));
     const cameraController = createCameraController({
       camera: sceneState.camera,
       domElement: sceneState.renderer.domElement,
     });
+    cameraController.startAtBuilding(batmanBuilding);
 
     const inspector = createInspector(
       {
