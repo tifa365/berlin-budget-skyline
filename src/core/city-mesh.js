@@ -1,16 +1,12 @@
-import { LAYOUT_CONFIG, THEME } from "../config.js";
+import { THEME } from "../config.js";
+import { createFacadeMaterial } from "./facade-material.js";
 
 const { THREE } = window;
 
 export function createCityMesh(scene, model) {
   const group = new THREE.Group();
   const buildingGeometry = new THREE.BoxGeometry(1, 1, 1);
-  const buildingMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    roughness: 0.86,
-    metalness: 0.08,
-    vertexColors: true,
-  });
+  const buildingMaterial = createFacadeMaterial(buildingGeometry, model.buildings);
   const buildings = new THREE.InstancedMesh(
     buildingGeometry,
     buildingMaterial,
@@ -19,27 +15,15 @@ export function createCityMesh(scene, model) {
   buildings.frustumCulled = false;
 
   const dummy = new THREE.Object3D();
-  const lowColor = new THREE.Color(THEME.lowBuilding);
-  const highColor = new THREE.Color(THEME.highBuilding);
-  const accentColor = new THREE.Color(0xffcf70);
 
   for (const building of model.buildings) {
     dummy.position.set(building.x, building.height / 2, building.z);
     dummy.scale.set(building.width, building.height, building.depth);
     dummy.updateMatrix();
     buildings.setMatrixAt(building.index, dummy.matrix);
-
-    const color = lowColor.clone().lerp(highColor, building.intensity);
-    if (building.rank <= 20) {
-      color.lerp(accentColor, 0.24);
-    }
-    buildings.setColorAt(building.index, color);
   }
 
   buildings.instanceMatrix.needsUpdate = true;
-  if (buildings.instanceColor) {
-    buildings.instanceColor.needsUpdate = true;
-  }
   group.add(buildings);
 
   group.add(createUrbanBase(model));
@@ -47,25 +31,17 @@ export function createCityMesh(scene, model) {
   const selectionEdges = new THREE.LineSegments(
     new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)),
     new THREE.LineBasicMaterial({
-      color: THEME.highlight,
+      color: 0xf4fbff,
       transparent: true,
-      opacity: 0.9,
+      opacity: 1,
+      depthWrite: false,
+      depthTest: false,
+      toneMapped: false,
     }),
   );
   selectionEdges.visible = false;
+  selectionEdges.renderOrder = 34;
   group.add(selectionEdges);
-
-  const selectionGlow = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshBasicMaterial({
-      color: THEME.glow,
-      transparent: true,
-      opacity: 0.07,
-      depthWrite: false,
-    }),
-  );
-  selectionGlow.visible = false;
-  group.add(selectionGlow);
 
   scene.add(group);
 
@@ -76,25 +52,17 @@ export function createCityMesh(scene, model) {
       return;
     }
 
-    selectionEdges.visible = true;
-    selectionGlow.visible = true;
     selectionEdges.position.set(building.x, building.height / 2, building.z);
-    selectionGlow.position.copy(selectionEdges.position);
     selectionEdges.scale.set(
-      building.width + 4,
-      building.height + 4,
-      building.depth + 4,
+      building.width + 5,
+      building.height + 5,
+      building.depth + 5,
     );
-    selectionGlow.scale.set(
-      building.width + 10,
-      building.height + 10,
-      building.depth + 10,
-    );
+    selectionEdges.visible = true;
   }
 
   function clearSelection() {
     selectionEdges.visible = false;
-    selectionGlow.visible = false;
   }
 
   return {
