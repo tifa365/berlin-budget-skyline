@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WikiCity</title>
+  <meta name="description" content="Explore the 100,000 most-viewed Wikipedia articles as a Three.js city skyline.">
+  <link rel="icon" type="image/png" href="./assets/favicon.png">
+  <link rel="stylesheet" href="./styles/app.css">
+  <script src="./assets/vendor/three.min.js"></script>
+  <script type="module" src="./src/app.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div id="loading" class="loading">
+      <h1 class="loading__title">wiki.city</h1>
+      <p id="loadingStatus" class="loading__status">Preparing 100,000 articles...</p>
+    </div>
+
+    <div id="stage" class="stage" aria-label="3D city explorer"></div>
+
+    <section class="search-shell" aria-label="Search articles">
+      <input id="articleSearch" class="search-input" type="search" placeholder="Search 100K articles..." autocomplete="off" aria-label="Search articles">
+      <div id="searchResults" class="search-results" role="listbox"></div>
+    </section>
+
+    <div id="tooltip" class="tooltip" role="status" aria-live="polite"></div>
+
+    <aside id="inspector" class="inspector" aria-label="Article details">
+      <button id="closeInspector" class="inspector__close" type="button" aria-label="Close article details">×</button>
+      <p class="inspector__eyebrow">Selected Article</p>
+      <h2 id="articleTitle" class="inspector__title"></h2>
+      <p id="articleTagline" class="inspector__tagline"></p>
+
+      <dl class="stats-grid">
+        <div class="stats-grid__item">
+          <dt>Rank</dt>
+          <dd id="articleRank">-</dd>
+        </div>
+        <div class="stats-grid__item">
+          <dt>Views</dt>
+          <dd id="articleViews">-</dd>
+        </div>
+        <div class="stats-grid__item">
+          <dt>Words</dt>
+          <dd id="articleWords">-</dd>
+        </div>
+        <div class="stats-grid__item">
+          <dt>Floors</dt>
+          <dd id="articleFloors">-</dd>
+        </div>
+      </dl>
+
+      <a id="articleLink" class="article-link" href="https://en.wikipedia.org/wiki/Main_Page" target="_blank" rel="noopener">Open on Wikipedia</a>
+
+      <section class="neighbors">
+        <div class="neighbors__header">
+          <h3>Nearby Buildings</h3>
+          <p>Closest neighbors in the layout</p>
+        </div>
+        <div id="neighborList" class="neighbor-list"></div>
+      </section>
+    </aside>
+  </div>
+</body>
+</html>
