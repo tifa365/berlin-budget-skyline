@@ -21,10 +21,8 @@ export function createFacadeMaterial(geometry, buildings) {
   const facadeBase = new Float32Array(count * 3);
   const facadeWindow = new Float32Array(count * 3);
   const facadeAccent = new Float32Array(count * 3);
-  const facadeReveal = new Float32Array(count);
 
   const lowBuilding = new THREE.Color(THEME.lowBuilding);
-  const highBuilding = new THREE.Color(THEME.highBuilding);
   const eliteAccent = new THREE.Color(0xffdf9b);
 
   for (const building of buildings) {
@@ -104,24 +102,23 @@ export function createFacadeMaterial(geometry, buildings) {
 
     const baseColor = lowBuilding
       .clone()
-      .lerp(highBuilding, intensity * 0.12)
-      .lerp(facadeFamilyColor, 0.56 + randomFromHash(titleHash, 17) * 0.2)
-      .lerp(districtColor, 0.24 + randomFromHash(titleHash, 18) * 0.18)
-      .lerp(sheenColor, 0.08 + variation * 0.08);
+      .lerp(facadeFamilyColor, 0.32 + randomFromHash(titleHash, 17) * 0.14)
+      .lerp(districtColor, 0.12 + randomFromHash(titleHash, 18) * 0.14)
+      .lerp(sheenColor, 0.04 + variation * 0.05);
 
     const windowColor = new THREE.Color(palette.window)
       .lerp(new THREE.Color(pairedPalette.window), 0.18 + paletteMix * 0.42)
       .lerp(
         new THREE.Color().setHSL(
           wrapHue(districtHue + 0.03),
-          clamp(districtSat * 0.34, 0.08, 0.3),
-          0.82 + randomFromHash(titleHash, 19) * 0.1,
+          clamp(districtSat * 0.48, 0.12, 0.46),
+          0.78 + randomFromHash(titleHash, 19) * 0.12,
         ),
-        0.12 + randomFromHash(titleHash, 20) * 0.14,
+        0.18 + randomFromHash(titleHash, 20) * 0.16,
       )
       .lerp(
         new THREE.Color(0xffffff),
-        intensity * 0.12 + variation * 0.1,
+        intensity * 0.07 + variation * 0.05,
       );
 
     const accentColor = new THREE.Color(palette.accent)
@@ -132,9 +129,9 @@ export function createFacadeMaterial(geometry, buildings) {
           clamp(districtSat + 0.08, 0.14, 0.84),
           clamp(0.44 + intensity * 0.12, 0.36, 0.68),
         ),
-        0.2 + randomFromHash(titleHash, 21) * 0.18,
+        0.28 + randomFromHash(titleHash, 21) * 0.22,
       )
-      .lerp(windowColor, 0.18);
+      .lerp(windowColor, 0.12);
 
     if (building.rank <= 24) {
       accentColor.lerp(eliteAccent, 0.24);
@@ -171,7 +168,6 @@ export function createFacadeMaterial(geometry, buildings) {
   geometry.setAttribute("aFacadeBase", new THREE.InstancedBufferAttribute(facadeBase, 3));
   geometry.setAttribute("aFacadeWindow", new THREE.InstancedBufferAttribute(facadeWindow, 3));
   geometry.setAttribute("aFacadeAccent", new THREE.InstancedBufferAttribute(facadeAccent, 3));
-  geometry.setAttribute("aFacadeReveal", new THREE.InstancedBufferAttribute(facadeReveal, 1));
 
   return new THREE.ShaderMaterial({
     uniforms: {
@@ -185,7 +181,6 @@ export function createFacadeMaterial(geometry, buildings) {
       attribute vec3 aFacadeBase;
       attribute vec3 aFacadeWindow;
       attribute vec3 aFacadeAccent;
-      attribute float aFacadeReveal;
 
       varying vec4 vSurface;
       varying vec4 vFacadeGridData;
@@ -193,7 +188,6 @@ export function createFacadeMaterial(geometry, buildings) {
       varying vec4 vColorA;
       varying vec4 vColorB;
       varying vec4 vColorC;
-      varying float vReveal;
 
       void main() {
         vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
@@ -203,7 +197,6 @@ export function createFacadeMaterial(geometry, buildings) {
         vColorA = vec4(aFacadeBase, aFacadeWindow.r);
         vColorB = vec4(aFacadeWindow.g, aFacadeWindow.b, aFacadeAccent.r, aFacadeAccent.g);
         vColorC = vec4(aFacadeAccent.b, length(mvPosition.xyz), uv.x, uv.y);
-        vReveal = aFacadeReveal;
         gl_Position = projectionMatrix * mvPosition;
       }
     `,
@@ -218,7 +211,6 @@ export function createFacadeMaterial(geometry, buildings) {
       varying vec4 vColorA;
       varying vec4 vColorB;
       varying vec4 vColorC;
-      varying float vReveal;
 
       float hash12(vec2 p) {
         vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -292,22 +284,30 @@ export function createFacadeMaterial(geometry, buildings) {
 
         float lit = step(hash12(cellId + vec2(seed * 0.071, seed * 0.117)), occupancy);
         float heightWash = smoothstep(0.0, 1.0, height);
-        float edgeWash = pow(1.0 - abs(cellUv.x - 0.5) * 2.0, 1.6);
-        float accentWash = (verticalAccent * 0.5 + horizontalAccent * 0.35 + crownBand * 0.45);
+        float accentWash = max(verticalAccent * 0.56, horizontalAccent * 0.44) + crownBand * 0.4;
+        float faceEdge = 1.0 - smoothstep(
+          0.024,
+          0.11,
+          min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y))
+        );
+        float cellEdge = 1.0 - smoothstep(
+          0.035,
+          0.2,
+          min(min(cellUv.x, 1.0 - cellUv.x), min(cellUv.y, 1.0 - cellUv.y))
+        );
 
-        vec3 wallColor = facadeBase * (0.92 + 0.12 * height);
-        wallColor *= 0.96 + (hash12(cellId + vec2(seed * 0.09, seed * 0.19)) - 0.5) * 0.08;
-        wallColor = mix(wallColor, mix(facadeBase, facadeAccent, 0.38), 0.06 + heightWash * 0.08);
-        wallColor += facadeAccent * edgeWash * (0.015 + accentWash * 0.04);
+        vec3 wallColor = mix(vec3(0.008, 0.012, 0.028), facadeBase * 0.38, 0.52);
+        wallColor *= 0.88 + (hash12(cellId + vec2(seed * 0.09, seed * 0.19)) - 0.5) * 0.06;
+        wallColor += facadeAccent * (0.008 + heightWash * 0.012);
 
-        vec3 offWindowColor = mix(facadeBase * 0.54, vec3(0.02, 0.03, 0.055), 0.62);
-        offWindowColor += facadeAccent * (0.015 + accentWash * 0.02);
+        vec3 offWindowColor = mix(vec3(0.006, 0.009, 0.024), facadeBase * 0.12, 0.3);
         vec3 litWindowColor = mix(
           facadeWindow,
           facadeAccent,
           verticalAccent * 0.34 + horizontalAccent * 0.2 + crownBand * crown * 0.24
         );
-        litWindowColor *= 0.9 + hash12(cellId.yx + vec2(seed * 0.031, seed * 0.041)) * 0.35;
+        litWindowColor *= 1.0 + hash12(cellId.yx + vec2(seed * 0.031, seed * 0.041)) * 0.3;
+        vec3 neonTraceColor = mix(facadeAccent, facadeWindow, 0.36 + crownBand * 0.16);
 
         vec3 facadeColor = mix(
           wallColor,
@@ -315,14 +315,20 @@ export function createFacadeMaterial(geometry, buildings) {
           windowMask
         );
 
-        facadeColor += facadeAccent * verticalAccent * lit * windowMask * 0.09;
-        facadeColor += facadeAccent * horizontalAccent * 0.03;
-        facadeColor += facadeAccent * crownBand * crown * 0.05;
+        float tracerMask =
+          faceEdge * (0.68 + crownBand * 0.22) +
+          cellEdge * (0.07 + accentWash * 0.22 + lit * windowMask * 0.15);
+        facadeColor += neonTraceColor * tracerMask * 0.42;
+        facadeColor += facadeAccent * verticalAccent * 0.06;
+        facadeColor += facadeAccent * horizontalAccent * 0.05;
+        facadeColor += facadeAccent * crownBand * crown * 0.08;
+        facadeColor += litWindowColor * lit * windowMask * (0.08 + accentWash * 0.06);
 
         vec2 roofGrid = floor(uv * (4.0 + floor(variation * 5.0)));
         float roofNoise = hash12(roofGrid + vec2(seed * 0.23, seed * 0.29));
-        vec3 roofColor = mix(facadeBase * 0.75, facadeAccent, 0.18 + crown * 0.22);
-        roofColor += step(0.82, roofNoise) * facadeAccent * (0.05 + crown * 0.1);
+        vec3 roofColor = mix(vec3(0.008, 0.012, 0.024), facadeBase * 0.28, 0.46);
+        roofColor += neonTraceColor * faceEdge * (0.26 + crown * 0.18);
+        roofColor += step(0.82, roofNoise) * facadeAccent * (0.08 + crown * 0.18);
 
         vec3 color = mix(facadeColor, roofColor, roofMask);
 
@@ -330,18 +336,10 @@ export function createFacadeMaterial(geometry, buildings) {
         float diffuse = max(dot(normal, lightDir), 0.0);
         float skyLight = dot(normal, vec3(0.0, 1.0, 0.0)) * 0.5 + 0.5;
 
-        color *= 0.42 + diffuse * 0.5 + skyLight * 0.18;
-        color += facadeAccent * (1.0 - roofMask) * (0.012 + crownBand * 0.016);
-
-        if (vReveal > 0.001) {
-          float screenDoor = hash12(floor(gl_FragCoord.xy * 0.5) + vec2(seed * 0.01, seed * 0.02));
-          float visibleThreshold = mix(0.22, 0.44, vReveal);
-          if (screenDoor > visibleThreshold) {
-            discard;
-          }
-          color = mix(color, vec3(0.02, 0.05, 0.09), 0.45 + vReveal * 0.2);
-          color += facadeAccent * (0.05 + vReveal * 0.04);
-        }
+        color *= 0.24 + diffuse * 0.18 + skyLight * 0.08;
+        color += neonTraceColor * faceEdge * (0.28 + crownBand * 0.14);
+        color += facadeAccent * (verticalAccent * 0.1 + horizontalAccent * 0.08);
+        color += litWindowColor * lit * windowMask * (0.1 + crownBand * 0.08);
 
         float fogFactor = smoothstep(uFogNear, uFogFar, vColorC.y);
         color = mix(color, uFogColor, fogFactor);

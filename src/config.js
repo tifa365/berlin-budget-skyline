@@ -33,14 +33,14 @@ export const LAYOUT_CONFIG = {
 };
 
 export const THEME = {
-  background: 0x06101c,
-  fog: 0x081320,
-  ground: 0x09111b,
-  grid: 0x17314b,
-  park: 0x0f2d1c,
-  sidewalk: 0x101e2e,
-  lowBuilding: 0x14304a,
-  highBuilding: 0x86e0ff,
+  background: 0x02040b,
+  fog: 0x040813,
+  ground: 0x02050d,
+  grid: 0xff7a45,
+  park: 0x07180f,
+  sidewalk: 0x070d1b,
+  lowBuilding: 0x07111f,
+  highBuilding: 0x5ae0ff,
   highlight: 0xc3efff,
   glow: 0x69c4ff,
 };

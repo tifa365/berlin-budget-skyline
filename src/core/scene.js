@@ -49,17 +49,17 @@ export function createScene(stageElement) {
 }
 
 function addLights(scene) {
-  scene.add(new THREE.AmbientLight(0x4166aa, 1.35));
+  scene.add(new THREE.AmbientLight(0x13274a, 0.52));
 
-  const keyLight = new THREE.DirectionalLight(0xa5ceff, 1.5);
+  const keyLight = new THREE.DirectionalLight(0x6ec9ff, 1.08);
   keyLight.position.set(900, 1300, 500);
   scene.add(keyLight);
 
-  const rimLight = new THREE.DirectionalLight(0x325f9e, 0.7);
-  rimLight.position.set(-1200, 600, -900);
+  const rimLight = new THREE.DirectionalLight(0xff5fa8, 0.42);
+  rimLight.position.set(-1200, 680, -900);
   scene.add(rimLight);
 
-  const skyLight = new THREE.HemisphereLight(0x6a94c8, 0x06111f, 0.85);
+  const skyLight = new THREE.HemisphereLight(0x224b86, 0x02040b, 0.34);
   scene.add(skyLight);
 }
 
@@ -76,9 +76,9 @@ function addGround(scene) {
   ground.position.y = -2;
   scene.add(ground);
 
-  const grid = new THREE.GridHelper(12000, 180, THEME.grid, 0x0c1a29);
+  const grid = new THREE.GridHelper(12000, 180, THEME.grid, 0x13254f);
   grid.material.transparent = true;
-  grid.material.opacity = 0.28;
+  grid.material.opacity = 0.45;
   scene.add(grid);
 }
 
@@ -88,11 +88,11 @@ function addSky(scene) {
   canvas.height = 512;
   const context = canvas.getContext("2d");
   const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
-  gradient.addColorStop(0, "#03070d");
-  gradient.addColorStop(0.25, "#08111f");
-  gradient.addColorStop(0.55, "#10213b");
-  gradient.addColorStop(0.75, "#0a1730");
-  gradient.addColorStop(1, "#040910");
+  gradient.addColorStop(0, "#010208");
+  gradient.addColorStop(0.22, "#040817");
+  gradient.addColorStop(0.48, "#0d1836");
+  gradient.addColorStop(0.68, "#1b1230");
+  gradient.addColorStop(1, "#03050b");
   context.fillStyle = gradient;
   context.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -155,9 +155,9 @@ function addSky(scene) {
   const glow = new THREE.Mesh(
     new THREE.TorusGeometry(3600, 260, 12, 64),
     new THREE.MeshBasicMaterial({
-      color: 0x204b74,
+      color: 0x2a79d4,
       transparent: true,
-      opacity: 0.08,
+      opacity: 0.14,
       depthWrite: false,
       side: THREE.DoubleSide,
     }),
