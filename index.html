@@ -25,6 +25,7 @@
       <div id="searchResults" class="search-results" role="listbox"></div>
     </section>
 
+    <button id="musicBtn" class="music-btn" type="button" aria-label="Toggle music" title="Toggle music">🔊</button>
     <button id="skylineBtn" class="skyline-btn" type="button" aria-label="Watch the skyline" title="Watch the skyline">🏙️</button>
     <div id="tooltip" class="tooltip" role="status" aria-live="polite"></div>
 
@@ -64,5 +65,35 @@
       </section>
     </aside>
   </div>
+  <audio id="bgMusic" src="./citydreams.mp3" loop preload="auto"></audio>
+  <script>
+    (function() {
+      var m = document.getElementById("bgMusic");
+      var btn = document.getElementById("musicBtn");
+      m.volume = 0.04;
+      var muted = false;
+      function go() {
+        m.play().then(function() {
+          btn.style.opacity = "1";
+          btn.style.pointerEvents = "auto";
+          document.removeEventListener("pointerdown", go, true);
+          document.removeEventListener("click", go, true);
+          document.removeEventListener("keydown", go, true);
+        }).catch(function() {});
+      }
+      document.addEventListener("pointerdown", go, true);
+      document.addEventListener("click", go, true);
+      document.addEventListener("keydown", go, true);
+      btn.addEventListener("click", function(e) {
+        e.stopPropagation();
+        m.muted = true;
+        btn.textContent = "🔇";
+        btn.style.transition = "opacity 2s ease";
+        btn.style.opacity = "0";
+        btn.style.pointerEvents = "none";
+      });
+      go();
+    })();
+  </script>
 </body>
 </html>

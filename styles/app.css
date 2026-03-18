@@ -383,10 +383,36 @@ input {
   }
 }
 
-.skyline-btn {
+.music-btn {
   position: fixed;
   top: 18px;
   left: 18px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(9, 20, 36, 0.88);
+  border: 1px solid rgba(123, 181, 255, 0.18);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 2s ease, background 0.2s;
+}
+
+.music-btn:hover {
+  background: var(--bg-soft);
+  border-color: var(--border-strong);
+}
+
+.skyline-btn {
+  position: fixed;
+  top: 18px;
+  left: 80px;
   z-index: 40;
   display: flex;
   align-items: center;
