@@ -195,6 +195,7 @@ export function createFacadeMaterial(geometry, buildings) {
       attribute vec3 aFacadeBase;
       attribute vec3 aFacadeWindow;
       attribute vec3 aFacadeAccent;
+      attribute float aRise;
 
       varying vec4 vSurface;
       varying vec4 vFacadeGridData;
@@ -204,7 +205,9 @@ export function createFacadeMaterial(geometry, buildings) {
       varying vec4 vColorC;
 
       void main() {
-        vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+        vec3 p = position;
+        p.y = p.y * aRise + (aRise - 1.0) * 0.5;
+        vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(p, 1.0);
         vSurface = vec4(normalize(mat3(instanceMatrix) * normal), position.y + 0.5);
         vFacadeGridData = aFacadeGrid;
         vFacadeStyleData = aFacadeStyle;

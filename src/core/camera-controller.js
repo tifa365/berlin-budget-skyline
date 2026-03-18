@@ -22,6 +22,32 @@ export function createCameraController({ camera, domElement }) {
   let idleSeconds = 0;
   let lerpSpeed = 0.07;
 
+  // ═══ CINEMATIC FLYOVER ═══
+  let flyoverActive = false;
+  let flyoverT = 0;
+  const flyoverDelay = 0; // fly and rise simultaneously
+  const flyoverDur = 12;
+
+  const flyoverCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(3000, 900, 3000),
+    new THREE.Vector3(1600, 650, 1800),
+    new THREE.Vector3(600, 500, 900),
+    new THREE.Vector3(-100, 400, 300),
+    new THREE.Vector3(-400, 380, -100),
+    new THREE.Vector3(-200, 400, -50),
+  ]);
+
+  const flyoverLookCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, 150, 0),
+    new THREE.Vector3(0, 100, 0),
+    new THREE.Vector3(0, 80, 0),
+    new THREE.Vector3(-100, 50, -100),
+    new THREE.Vector3(0, 60, 0),
+    new THREE.Vector3(0, 80, 0),
+  ]);
+
+  let flyoverEndBuilding = null;
+
   domElement.addEventListener("pointerdown", onPointerDown);
   window.addEventListener("pointermove", onPointerMove);
   window.addEventListener("pointerup", onPointerUp);
@@ -29,6 +55,13 @@ export function createCameraController({ camera, domElement }) {
 
   function onPointerDown(event) {
     if (event.button !== undefined && event.button !== 0) {
+      return;
+    }
+
+    // Click skips the flyover
+    if (flyoverActive) {
+      flyoverActive = false;
+      settleAfterFlyover();
       return;
     }
 
@@ -45,6 +78,7 @@ export function createCameraController({ camera, domElement }) {
   }
 
   function onPointerMove(event) {
+    if (flyoverActive) return;
     if (!dragging || event.pointerId !== activePointerId) {
       return;
     }
@@ -69,6 +103,7 @@ export function createCameraController({ camera, domElement }) {
   }
 
   function onPointerUp(event) {
+    if (flyoverActive) return;
     if (event.pointerId !== activePointerId) {
       return;
     }
@@ -79,6 +114,11 @@ export function createCameraController({ camera, domElement }) {
   }
 
   function onWheel(event) {
+    if (flyoverActive) {
+      flyoverActive = false;
+      settleAfterFlyover();
+      return;
+    }
     targetDistance = clamp(
       targetDistance + event.deltaY * 1.2,
       CAMERA_CONFIG.minDistance,
@@ -87,7 +127,48 @@ export function createCameraController({ camera, domElement }) {
     idleSeconds = 0;
   }
 
+  function settleAfterFlyover() {
+    // Derive orbital parameters from current camera position over the park
+    target.set(0, 80, 0);
+    targetGoal.set(0, 120, 0);
+    const dx = camera.position.x - target.x;
+    const dy = camera.position.y - target.y;
+    const dz = camera.position.z - target.z;
+    distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    phi = Math.acos(clamp(dy / distance, -1, 1));
+    theta = Math.atan2(dz, dx);
+    targetTheta = theta;
+    targetPhi = CAMERA_CONFIG.phi;
+    targetDistance = CAMERA_CONFIG.distance;
+    lerpSpeed = 0.04;
+    idleSeconds = 5; // start auto-rotate immediately
+  }
+
   function update(deltaSeconds) {
+    // Cinematic flyover — camera follows spline path
+    if (flyoverActive) {
+      flyoverT += deltaSeconds;
+      if (flyoverT < flyoverDelay) return; // hold still while buildings rise
+      const progress = Math.min((flyoverT - flyoverDelay) / flyoverDur, 1);
+      // easeInOutQuad
+      const eased = progress < 0.5
+        ? 2 * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+      const pos = flyoverCurve.getPoint(eased);
+      const look = flyoverLookCurve.getPoint(eased);
+      camera.position.copy(pos);
+      camera.lookAt(look);
+      target.copy(look);
+      targetGoal.copy(look);
+
+      if (progress >= 1) {
+        flyoverActive = false;
+        settleAfterFlyover();
+      }
+      return;
+    }
+
     idleSeconds += deltaSeconds;
     if (!dragging && idleSeconds > 4) {
       const rotateSpeed = Math.min(0.022 * (CAMERA_CONFIG.distance / distance), 0.04);
@@ -110,22 +191,25 @@ export function createCameraController({ camera, domElement }) {
   }
 
   function startAtBuilding(building) {
-    const goal = new THREE.Vector3(building.x, building.height * 0.6, building.z);
-    target.copy(goal);
-    targetGoal.copy(goal);
-    const dist = clamp(
-      Math.max(building.height * 1.5, building.width * 9, building.depth * 9),
-      220,
-      800,
-    );
-    distance = dist;
-    targetDistance = dist;
-    phi = 0.85;
-    targetPhi = 0.85;
-    idleSeconds = 0;
+    // Begin cinematic flyover, end at this building
+    flyoverActive = true;
+    flyoverT = 0;
+    flyoverEndBuilding = building;
+
+    // Position camera at the start of the spline
+    const startPos = flyoverCurve.getPoint(0);
+    const startLook = flyoverLookCurve.getPoint(0);
+    camera.position.copy(startPos);
+    camera.lookAt(startLook);
+    target.copy(startLook);
+    targetGoal.copy(startLook);
   }
 
   function focusBuilding(building) {
+    if (flyoverActive) {
+      flyoverActive = false;
+      settleAfterFlyover();
+    }
     targetGoal.set(building.x, building.height * 0.35, building.z);
     targetDistance = clamp(
       Math.max(building.height * 1.9, building.width * 9, building.depth * 9),
@@ -142,11 +226,10 @@ export function createCameraController({ camera, domElement }) {
     targetDistance = 350;
     targetPhi = 0.75;
     lerpSpeed = 0.05;
-    idleSeconds = 5; // immediately start auto-rotate for 360 view
+    idleSeconds = 5;
   }
 
   function viewSkyline() {
-    // Standing at fountain, looking up at the skyline
     targetGoal.set(0, 90, 0);
     targetDistance = 100;
     targetPhi = 2.0;

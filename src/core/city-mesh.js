@@ -18,15 +18,40 @@ export function createCityMesh(scene, model) {
   buildings.frustumCulled = false;
 
   const dummy = new THREE.Object3D();
+  const N = model.buildings.length;
 
+  // Set full-height instance matrices (shader controls visible rise)
   for (const building of model.buildings) {
     dummy.position.set(building.x, building.height / 2, building.z);
     dummy.scale.set(building.width, building.height, building.depth);
     dummy.updateMatrix();
     buildings.setMatrixAt(building.index, dummy.matrix);
   }
-
   buildings.instanceMatrix.needsUpdate = true;
+
+  // Rise animation: per-instance float attribute drives the shader
+  const riseData = new Float32Array(N);
+  const riseAttribute = new THREE.InstancedBufferAttribute(riseData, 1);
+  riseAttribute.setUsage(THREE.DynamicDrawUsage);
+  buildingGeometry.setAttribute("aRise", riseAttribute);
+
+  // Wave follows flyover path: buildings near the camera start rise first
+  const RISE_DURATION = 0.9;
+  const RISE_WAVE_SPAN = 5.5;
+  const riseDelays = new Float32Array(N);
+  let maxRiseDist = 0;
+  for (let i = 0; i < N; i++) {
+    const b = model.buildings[i];
+    const d = Math.sqrt((b.x - 3000) ** 2 + (b.z - 3000) ** 2);
+    riseDelays[i] = d;
+    if (d > maxRiseDist) maxRiseDist = d;
+  }
+  for (let i = 0; i < N; i++) {
+    riseDelays[i] = (riseDelays[i] / maxRiseDist) * RISE_WAVE_SPAN;
+  }
+  let riseStartTime = -1;
+  let riseComplete = false;
+
   group.add(buildings);
 
   group.add(createUrbanBase(model));
@@ -49,6 +74,28 @@ export function createCityMesh(scene, model) {
   scene.add(group);
 
   function update(elapsedSeconds, camera) {
+    // Rise animation: shader-driven building growth
+    if (!riseComplete) {
+      if (riseStartTime < 0) {
+        riseStartTime = elapsedSeconds;
+      }
+      const elapsed = elapsedSeconds - riseStartTime;
+      let changed = false;
+      for (let i = 0; i < N; i++) {
+        if (riseData[i] >= 1) continue;
+        const el = elapsed - riseDelays[i];
+        if (el < 0) continue;
+        riseData[i] = 1 - Math.pow(1 - Math.min(1, el / RISE_DURATION), 3);
+        changed = true;
+      }
+      if (changed) {
+        riseAttribute.needsUpdate = true;
+      }
+      if (!changed && elapsed > RISE_WAVE_SPAN + RISE_DURATION) {
+        riseComplete = true;
+      }
+    }
+
     buildingMaterial.uniforms.uTime.value = elapsedSeconds;
     if (!camera) {
       return;
