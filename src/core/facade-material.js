@@ -259,11 +259,13 @@ export function createFacadeMaterial(geometry, buildings) {
 
         float frameX = mix(0.11, 0.2, variation * 0.85);
         float frameY = mix(0.1, 0.16, hash12(cellId.yx + vec2(seed, seed * 0.37)));
+        float topRow = step(rows - 0.5, cellId.y + 1.0);
         float windowMask =
           step(frameX, cellUv.x) *
           step(frameY, cellUv.y) *
           step(cellUv.x, 1.0 - frameX) *
-          step(cellUv.y, 1.0 - frameY);
+          step(cellUv.y, 1.0 - frameY) *
+          (1.0 - topRow);
 
         float occupancy = vFacadeGridData.w;
         occupancy += (hash12(cellId + vec2(seed * 0.13, seed * 0.29)) - 0.5) * 0.08;

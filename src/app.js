@@ -7,6 +7,7 @@ import {
   formatWords,
 } from "./core/formatting.js";
 import { createScene } from "./core/scene.js";
+import { createCarLights } from "./core/car-lights.js";
 import { createCityMesh } from "./core/city-mesh.js";
 import { WIKI_DATA } from "./data/wiki-data.js";
 import { createInspector } from "./ui/panel.js";
@@ -34,6 +35,7 @@ requestAnimationFrame(() => {
     const model = buildCityModel(articles);
     const sceneState = createScene(stage);
     const city = createCityMesh(sceneState.scene, model);
+    const carLights = createCarLights(sceneState.scene, model);
 
     // Place Lego Batman on a high (but not the highest) building
     const batmanBuilding = model.buildings[4];
@@ -229,6 +231,7 @@ requestAnimationFrame(() => {
 
       cameraController.update(deltaSeconds);
       city.update(now / 1000, sceneState.camera);
+      carLights.update(now / 1000);
       sceneState.update(now / 1000);
       sceneState.renderer.render(sceneState.scene, sceneState.camera);
       requestAnimationFrame(animate);
