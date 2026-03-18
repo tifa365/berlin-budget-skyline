@@ -517,17 +517,7 @@ function createUrbanBase(model) {
   sidewalks.instanceMatrix.needsUpdate = true;
   baseGroup.add(sidewalks);
 
-  const park = new THREE.Mesh(
-    new THREE.PlaneGeometry(model.layout.parkSizeX, model.layout.parkSizeZ),
-    new THREE.MeshStandardMaterial({
-      color: THEME.park,
-      roughness: 1,
-      metalness: 0,
-    }),
-  );
-  park.rotation.x = -Math.PI / 2;
-  park.position.y = -0.3;
-  baseGroup.add(park);
+  // Park is now handled by park.js
 
   const ring = new THREE.Mesh(
     new THREE.TorusGeometry(4300, 100, 8, 64),

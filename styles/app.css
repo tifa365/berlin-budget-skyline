@@ -382,3 +382,33 @@ input {
     transform: translateY(0);
   }
 }
+
+.skyline-btn {
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease, background 0.2s;
+}
+
+.skyline-btn.is-visible {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.skyline-btn:hover {
+  background: var(--bg-soft);
+  border-color: var(--border-strong);
+}

@@ -90,7 +90,7 @@ export function createCameraController({ camera, domElement }) {
   function update(deltaSeconds) {
     idleSeconds += deltaSeconds;
     if (!dragging && idleSeconds > 4) {
-      const rotateSpeed = 0.022 * (CAMERA_CONFIG.distance / distance);
+      const rotateSpeed = Math.min(0.022 * (CAMERA_CONFIG.distance / distance), 0.04);
       targetTheta -= deltaSeconds * rotateSpeed;
     }
 
@@ -137,6 +137,23 @@ export function createCameraController({ camera, domElement }) {
     idleSeconds = 0;
   }
 
+  function focusPark() {
+    targetGoal.set(0, 10, 0);
+    targetDistance = 350;
+    targetPhi = 0.75;
+    lerpSpeed = 0.05;
+    idleSeconds = 5; // immediately start auto-rotate for 360 view
+  }
+
+  function viewSkyline() {
+    // Standing at fountain, looking up at the skyline
+    targetGoal.set(0, 90, 0);
+    targetDistance = 100;
+    targetPhi = 2.0;
+    lerpSpeed = 0.03;
+    idleSeconds = 5;
+  }
+
   function reset() {
     targetGoal.set(0, 120, 0);
     targetTheta = CAMERA_CONFIG.theta;
@@ -150,6 +167,8 @@ export function createCameraController({ camera, domElement }) {
     update,
     startAtBuilding,
     focusBuilding,
+    focusPark,
+    viewSkyline,
     reset,
     isDragging: () => dragging,
     movedSinceDown: () => movedSinceDown,

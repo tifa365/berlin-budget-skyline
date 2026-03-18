@@ -9,6 +9,7 @@ import {
 import { createScene } from "./core/scene.js";
 import { createCarLights } from "./core/car-lights.js";
 import { createCityMesh } from "./core/city-mesh.js";
+import { createPark } from "./core/park.js";
 import { WIKI_DATA } from "./data/wiki-data.js";
 import { createInspector } from "./ui/panel.js";
 import { createSearch } from "./ui/search.js";
@@ -32,10 +33,12 @@ requestAnimationFrame(() => {
   setLoading("Plotting the skyline...");
 
   requestAnimationFrame(() => {
+    const skylineBtn = document.getElementById("skylineBtn");
     const model = buildCityModel(articles);
     const sceneState = createScene(stage);
     const city = createCityMesh(sceneState.scene, model);
     const carLights = createCarLights(sceneState.scene, model);
+    const park = createPark(sceneState.scene, model);
 
     // Place Lego Batman on a high (but not the highest) building
     const batmanBuilding = model.buildings[4];
@@ -138,6 +141,10 @@ requestAnimationFrame(() => {
       } else if (selectedIndex >= 0) {
         clearSelection();
         setTimeout(() => cameraController.reset(), 1000);
+      } else if (pickPark()) {
+        console.log("Park clicked!");
+        cameraController.focusPark();
+        skylineBtn.classList.add("is-visible");
       }
     });
 
@@ -157,6 +164,13 @@ requestAnimationFrame(() => {
       return hits[0].instanceId ?? -1;
     }
 
+    function pickPark() {
+      raycaster.setFromCamera(pointer, sceneState.camera);
+      park.groundMesh.updateMatrixWorld();
+      const hits = raycaster.intersectObject(park.groundMesh, true);
+      return hits.length > 0;
+    }
+
     function selectBuilding(index) {
       const building = model.buildings[index];
       if (!building) {
@@ -166,6 +180,7 @@ requestAnimationFrame(() => {
       selectedIndex = index;
       city.select(index);
       cameraController.focusBuilding(building);
+      skylineBtn.classList.remove("is-visible");
       search.setValue(building.title);
 
       inspector.show(
@@ -180,6 +195,7 @@ requestAnimationFrame(() => {
       selectedIndex = -1;
       city.clearSelection();
       inspector.hide();
+      skylineBtn.classList.remove("is-visible");
     }
 
     function showTooltip(index) {
@@ -236,6 +252,11 @@ requestAnimationFrame(() => {
       sceneState.renderer.render(sceneState.scene, sceneState.camera);
       requestAnimationFrame(animate);
     }
+
+    skylineBtn.addEventListener("click", () => {
+      cameraController.viewSkyline();
+      skylineBtn.classList.remove("is-visible");
+    });
 
     loading.classList.add("is-hidden");
     requestAnimationFrame(animate);
