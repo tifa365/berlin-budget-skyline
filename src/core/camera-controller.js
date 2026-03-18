@@ -20,7 +20,7 @@ export function createCameraController({ camera, domElement }) {
   let lastPointerX = 0;
   let lastPointerY = 0;
   let idleSeconds = 0;
-  let lerpSpeed = 0.12;
+  let lerpSpeed = 0.07;
 
   domElement.addEventListener("pointerdown", onPointerDown);
   window.addEventListener("pointermove", onPointerMove);
@@ -94,10 +94,11 @@ export function createCameraController({ camera, domElement }) {
       targetTheta -= deltaSeconds * rotateSpeed;
     }
 
-    theta += (targetTheta - theta) * lerpSpeed;
-    phi += (targetPhi - phi) * lerpSpeed;
-    distance += (targetDistance - distance) * lerpSpeed;
-    target.lerp(targetGoal, lerpSpeed);
+    const smoothing = 1 - Math.pow(1 - lerpSpeed, deltaSeconds * 60);
+    theta += (targetTheta - theta) * smoothing;
+    phi += (targetPhi - phi) * smoothing;
+    distance += (targetDistance - distance) * smoothing;
+    target.lerp(targetGoal, smoothing);
 
     const sinPhi = Math.sin(phi);
     camera.position.set(
@@ -132,7 +133,7 @@ export function createCameraController({ camera, domElement }) {
       2300,
     );
     targetPhi = 0.96;
-    lerpSpeed = 0.12;
+    lerpSpeed = 0.07;
     idleSeconds = 0;
   }
 
