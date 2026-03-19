@@ -1,6 +1,14 @@
 import { formatInteger, formatViews } from "../core/formatting.js";
 
-export function createSearch({ input, results, items, onSelect, limit }) {
+export function createSearch({
+  shell,
+  input,
+  results,
+  closeButton,
+  items,
+  onSelect,
+  limit,
+}) {
   const indexedItems = items
     .map((item) => ({
       ...item,
@@ -9,12 +17,18 @@ export function createSearch({ input, results, items, onSelect, limit }) {
     .sort((left, right) => left.rank - right.rank);
 
   let currentMatches = [];
+  let dismissed = false;
 
   input.addEventListener("input", handleInput);
   input.addEventListener("keydown", handleKeydown);
   document.addEventListener("click", handleDocumentClick);
+  closeButton?.addEventListener("click", dismiss);
+  closeButton?.addEventListener("keydown", handleCloseButtonKeydown);
 
   function handleInput() {
+    if (dismissed) {
+      return;
+    }
     const query = input.value.trim().toLowerCase();
     if (!query) {
       close();
@@ -35,6 +49,9 @@ export function createSearch({ input, results, items, onSelect, limit }) {
   }
 
   function handleKeydown(event) {
+    if (dismissed) {
+      return;
+    }
     if (event.key === "Escape") {
       close();
       input.blur();
@@ -48,10 +65,36 @@ export function createSearch({ input, results, items, onSelect, limit }) {
   }
 
   function handleDocumentClick(event) {
-    if (results.contains(event.target) || event.target === input) {
+    if (dismissed) {
+      return;
+    }
+    if (
+      results.contains(event.target) ||
+      event.target === input ||
+      shell?.contains(event.target)
+    ) {
       return;
     }
     close();
+  }
+
+  function dismiss(event) {
+    if (dismissed) {
+      return;
+    }
+    event?.preventDefault();
+    event?.stopPropagation();
+    close();
+    input.blur();
+    dismissed = true;
+    teardown();
+    hideShell();
+  }
+
+  function handleCloseButtonKeydown(event) {
+    if (event.key === "Enter" || event.key === " ") {
+      dismiss(event);
+    }
   }
 
   function render(matches) {
@@ -94,6 +137,14 @@ export function createSearch({ input, results, items, onSelect, limit }) {
     currentMatches = [];
   }
 
+  function teardown() {
+    input.removeEventListener("input", handleInput);
+    input.removeEventListener("keydown", handleKeydown);
+    document.removeEventListener("click", handleDocumentClick);
+    closeButton?.removeEventListener("click", dismiss);
+    closeButton?.removeEventListener("keydown", handleCloseButtonKeydown);
+  }
+
   return {
     setValue(value) {
       input.value = value;
@@ -103,4 +154,15 @@ export function createSearch({ input, results, items, onSelect, limit }) {
       close();
     },
   };
+
+  function hideShell() {
+    if (!shell) {
+      return;
+    }
+    shell.classList.add("is-hidden");
+    shell.setAttribute("aria-hidden", "true");
+    window.setTimeout(() => {
+      shell.remove();
+    }, 220);
+  }
 }

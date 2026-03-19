@@ -4,24 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WikiCity</title>
-  <meta name="description" content="Explore the 100,000 most-viewed Wikipedia articles as a Three.js city skyline.">
+  <meta name="description" content="Explore Wikipedia articles as a Three.js city skyline.">
   <link rel="icon" type="image/png" href="./assets/favicon.png">
-  <link rel="stylesheet" href="./styles/app.css">
+  <link rel="stylesheet" href="./styles/app.css?v=search-close-fix-2">
   <script src="./assets/vendor/three.min.js"></script>
   <script src="./assets/vendor/GLTFLoader.js"></script>
-  <script type="module" src="./src/app.js"></script>
+  <script type="module" src="./src/app.js?v=search-close-fix-2"></script>
 </head>
 <body>
   <div id="app">
     <div id="loading" class="loading">
       <h1 class="loading__title">wiki.city</h1>
-      <p id="loadingStatus" class="loading__status">Preparing 100,000 articles...</p>
+      <p id="loadingStatus" class="loading__status">Preparing article dataset...</p>
     </div>
 
     <div id="stage" class="stage" aria-label="3D city explorer"></div>
 
     <section class="search-shell" aria-label="Search articles">
-      <input id="articleSearch" class="search-input" type="search" placeholder="Search 100K articles..." autocomplete="off" aria-label="Search articles">
+      <button id="closeSearch" class="search-shell__close" type="button" aria-label="Close search">×</button>
+      <input id="articleSearch" class="search-input" type="text" placeholder="Search articles..." autocomplete="off" spellcheck="false" aria-label="Search articles">
       <div id="searchResults" class="search-results" role="listbox"></div>
     </section>
 
@@ -35,6 +36,16 @@
       <h2 id="articleTitle" class="inspector__title"></h2>
       <p id="articleTagline" class="inspector__tagline"></p>
 
+      <figure id="articlePreview" class="article-preview" hidden>
+        <img id="articleImage" class="article-preview__image" alt="">
+      </figure>
+
+      <section class="article-summary" aria-live="polite">
+        <p id="articleSummaryState" class="article-summary__state">Select an article to load its live Wikipedia preview.</p>
+        <p id="articleDescription" class="article-summary__description" hidden></p>
+        <p id="articleExtract" class="article-summary__extract" hidden></p>
+      </section>
+
       <dl class="stats-grid">
         <div class="stats-grid__item">
           <dt>Rank</dt>
@@ -45,7 +56,7 @@
           <dd id="articleViews">-</dd>
         </div>
         <div class="stats-grid__item">
-          <dt>Words</dt>
+          <dt>Page Size</dt>
           <dd id="articleWords">-</dd>
         </div>
         <div class="stats-grid__item">
@@ -54,7 +65,7 @@
         </div>
       </dl>
 
-      <a id="articleLink" class="article-link" href="https://en.wikipedia.org/wiki/Main_Page" target="_blank" rel="noopener">Open on Wikipedia</a>
+      <a id="articleLink" class="article-link" href="https://de.wikipedia.org/wiki/Hauptseite" target="_blank" rel="noopener">Open on German Wikipedia</a>
 
       <section class="neighbors">
         <div class="neighbors__header">

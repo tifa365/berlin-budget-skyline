@@ -1,4 +1,5 @@
 import { THEME } from "../config.js";
+import { createArticleBannerLayer } from "./article-banner-layer.js";
 import { createFacadeMaterial } from "./facade-material.js";
 
 const { THREE } = window;
@@ -53,6 +54,7 @@ export function createCityMesh(scene, model) {
   let riseComplete = false;
 
   group.add(buildings);
+  createArticleBannerLayer(group, model.buildings);
 
   group.add(createUrbanBase(model));
 

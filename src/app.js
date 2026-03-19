@@ -4,15 +4,15 @@ import { createCameraController } from "./core/camera-controller.js";
 import {
   formatInteger,
   formatViews,
-  formatWords,
 } from "./core/formatting.js";
 import { createScene } from "./core/scene.js";
 import { createCarLights } from "./core/car-lights.js";
 import { createCityMesh } from "./core/city-mesh.js";
 import { createPark } from "./core/park.js";
+import { fetchArticleSummary } from "./core/wiki-api.js";
 import { WIKI_DATA } from "./data/wiki-data.js";
 import { createInspector } from "./ui/panel.js";
-import { createSearch } from "./ui/search.js";
+import { createSearch } from "./ui/search.js?v=search-close-fix-2";
 
 const { THREE } = window;
 
@@ -72,6 +72,11 @@ requestAnimationFrame(() => {
         words: document.getElementById("articleWords"),
         floors: document.getElementById("articleFloors"),
         link: document.getElementById("articleLink"),
+        preview: document.getElementById("articlePreview"),
+        image: document.getElementById("articleImage"),
+        summaryState: document.getElementById("articleSummaryState"),
+        description: document.getElementById("articleDescription"),
+        extract: document.getElementById("articleExtract"),
         neighborList: document.getElementById("neighborList"),
       },
       {
@@ -81,8 +86,10 @@ requestAnimationFrame(() => {
     );
 
     const search = createSearch({
+      shell: document.querySelector(".search-shell"),
       input: document.getElementById("articleSearch"),
       results: document.getElementById("searchResults"),
+      closeButton: document.getElementById("closeSearch"),
       items: model.buildings.map((building) => ({
         index: building.index,
         title: building.title,
@@ -105,6 +112,8 @@ requestAnimationFrame(() => {
     let pointerDownX = 0;
     let pointerDownY = 0;
     let lastPointerType = "mouse";
+    let previewController = null;
+    let previewRequestId = 0;
 
     sceneState.renderer.domElement.addEventListener("pointermove", (event) => {
       lastPointerType = event.pointerType || "mouse";
@@ -187,15 +196,51 @@ requestAnimationFrame(() => {
         building,
         findNearestNeighbors(model.buildings, index, APP_CONFIG.neighborCount),
       );
+      loadArticlePreview(building);
       tooltip.innerHTML = "";
       hideTooltip();
     }
 
     function clearSelection() {
+      previewRequestId += 1;
+      if (previewController) {
+        previewController.abort();
+        previewController = null;
+      }
       selectedIndex = -1;
       city.clearSelection();
       inspector.hide();
       skylineBtn.classList.remove("is-visible");
+    }
+
+    async function loadArticlePreview(building) {
+      previewRequestId += 1;
+      const requestId = previewRequestId;
+
+      if (previewController) {
+        previewController.abort();
+      }
+
+      previewController = new AbortController();
+
+      try {
+        const summary = await fetchArticleSummary(building.title, {
+          signal: previewController.signal,
+        });
+        if (requestId !== previewRequestId || selectedIndex !== building.index) {
+          return;
+        }
+        inspector.applyArticlePreview(summary);
+      } catch (error) {
+        if (error?.name === "AbortError") {
+          return;
+        }
+        console.error("Wikipedia preview error", error);
+        if (requestId !== previewRequestId || selectedIndex !== building.index) {
+          return;
+        }
+        inspector.showArticlePreviewError();
+      }
     }
 
     function showTooltip(index) {
@@ -213,7 +258,7 @@ requestAnimationFrame(() => {
 
       const meta = document.createElement("span");
       meta.className = "tooltip__meta";
-      meta.textContent = `${formatViews(building.views)} views • ${formatWords(building.words)} words • #${formatInteger(building.rank)}`;
+      meta.textContent = `${formatViews(building.views)} views • #${formatInteger(building.rank)}`;
 
       tooltip.append(title, meta);
       tooltip.style.left = `${Math.min(pointerX + 16, window.innerWidth - 280)}px`;

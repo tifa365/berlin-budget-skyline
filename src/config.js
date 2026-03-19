@@ -4,6 +4,20 @@ export const APP_CONFIG = {
   searchLimit: 20,
 };
 
+export const ARTICLE_BANNER_CONFIG = {
+  enabled: true,
+  minFloors: 90,
+  maxBuildings: 48,
+  loadConcurrency: 6,
+  startDelayMs: 1400,
+  facadeOffset: 1.6,
+  minBannerHeight: 18,
+  maxBannerHeight: 28,
+  textureWidth: 512,
+  textureHeight: 192,
+  opacity: 0.96,
+};
+
 export const CAMERA_CONFIG = {
   theta: -0.65,
   phi: 1.02,

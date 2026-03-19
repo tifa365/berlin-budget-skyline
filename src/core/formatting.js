@@ -40,7 +40,3 @@ export function describeRank(rank) {
   }
   return "Part of the 100,000-article skyline.";
 }
-
-export function buildArticleUrl(title) {
-  return `https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}`;
-}
