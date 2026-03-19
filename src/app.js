@@ -1,13 +1,13 @@
 import { APP_CONFIG } from "./config.js";
 import { buildCityModel } from "./core/city-data.js";
-import { createCameraController } from "./core/camera-controller.js";
+import { createCameraController } from "./core/camera-controller.js?v=wednesday-focus-1";
 import {
   formatInteger,
   formatViews,
 } from "./core/formatting.js";
 import { createScene } from "./core/scene.js";
 import { createCarLights } from "./core/car-lights.js";
-import { createCityMesh } from "./core/city-mesh.js?v=banner-rise-fix-1";
+import { createCityMesh } from "./core/city-mesh.js?v=wednesday-poster-2";
 import { createPark } from "./core/park.js";
 import { fetchArticleSummary } from "./core/wiki-api.js";
 import { WIKI_DATA } from "./data/wiki-data.js";
@@ -40,8 +40,13 @@ requestAnimationFrame(() => {
     const carLights = createCarLights(sceneState.scene, model);
     const park = createPark(sceneState.scene, model);
 
-    // Place Lego Batman on a high (but not the highest) building
-    const batmanBuilding = model.buildings[4];
+    const batmanBuilding = model.buildings.reduce(
+      (tallest, building) => (building.height > tallest.height ? building : tallest),
+      model.buildings[0],
+    );
+    const introBuilding = model.buildings.find(
+      (building) => building.title === "Wednesday (Fernsehserie)",
+    ) || batmanBuilding;
     const loader = new THREE.GLTFLoader();
     loader.load("./assets/models/batman/scene.gltf", (gltf) => {
       console.log("Batman loaded", gltf);
@@ -59,7 +64,7 @@ requestAnimationFrame(() => {
       camera: sceneState.camera,
       domElement: sceneState.renderer.domElement,
     });
-    cameraController.startAtBuilding(batmanBuilding);
+    cameraController.startAtBuilding(introBuilding);
 
     const inspector = createInspector(
       {

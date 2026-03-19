@@ -1,5 +1,5 @@
 import { ARTICLE_BANNER_CONFIG } from "../config.js";
-import { fetchArticleSummary, shouldSuppressBanner } from "./wiki-api.js";
+import * as wikiApi from "./wiki-api.js";
 
 const { THREE } = window;
 
@@ -20,14 +20,39 @@ const trimMaterial = new THREE.MeshBasicMaterial({
   depthWrite: false,
   toneMapped: false,
 });
+const posterBackingMaterial = new THREE.MeshBasicMaterial({
+  color: 0x04060c,
+  transparent: true,
+  opacity: 0.92,
+  side: THREE.DoubleSide,
+  depthWrite: false,
+  toneMapped: false,
+});
+const stapleMaterial = new THREE.MeshBasicMaterial({
+  color: 0xe7eef8,
+  transparent: true,
+  opacity: 0.9,
+  side: THREE.DoubleSide,
+  depthWrite: false,
+  toneMapped: false,
+});
 const imageLoader = new THREE.ImageLoader();
 imageLoader.setCrossOrigin("anonymous");
+const SPECIAL_FACADE_POSTERS = [
+  {
+    title: "Wednesday (Fernsehserie)",
+    imageUrl: new URL("../../itswednesday.jpg", import.meta.url).href,
+    facade: "south",
+    heightRatio: 0.72,
+  },
+];
 
 export function createArticleBannerLayer(parentGroup, buildings) {
   const layer = new THREE.Group();
   layer.renderOrder = 26;
   parentGroup.add(layer);
   const bannerEntries = [];
+  const specialPosterTitles = new Set(SPECIAL_FACADE_POSTERS.map((poster) => poster.title));
   let latestRiseData = null;
 
   if (!ARTICLE_BANNER_CONFIG.enabled) {
@@ -39,6 +64,7 @@ export function createArticleBannerLayer(parentGroup, buildings) {
 
   const bannerCandidates = buildings
     .slice()
+    .filter((building) => !specialPosterTitles.has(building.title))
     .sort((left, right) => right.floors - left.floors || left.rank - right.rank)
 
   if (!bannerCandidates.length) {
@@ -49,6 +75,10 @@ export function createArticleBannerLayer(parentGroup, buildings) {
   }
 
   window.setTimeout(() => {
+    void populateSpecialPosters(layer, buildings, (bannerGroup, buildingIndex) => {
+      bannerEntries.push({ group: bannerGroup, buildingIndex });
+      applyBannerRise(bannerGroup, latestRiseData?.[buildingIndex] ?? 0);
+    });
     void populateBanners(layer, bannerCandidates, (bannerGroup, buildingIndex) => {
       bannerEntries.push({ group: bannerGroup, buildingIndex });
       applyBannerRise(bannerGroup, latestRiseData?.[buildingIndex] ?? 0);
@@ -80,6 +110,28 @@ async function populateBanners(layer, buildings, registerBanner) {
   await Promise.all(workers);
 }
 
+async function populateSpecialPosters(layer, buildings, registerBanner) {
+  for (const poster of SPECIAL_FACADE_POSTERS) {
+    const building = buildings.find((candidate) => candidate.title === poster.title);
+    if (!building) {
+      continue;
+    }
+
+    try {
+      const texture = await loadPosterTexture(poster.imageUrl);
+      if (!texture) {
+        continue;
+      }
+
+      const posterGroup = createFeaturePosterGroup(building, texture, poster);
+      layer.add(posterGroup);
+      registerBanner(posterGroup, building.index);
+    } catch (error) {
+      console.warn(`[poster] ${poster.title}: ${error.message}`);
+    }
+  }
+}
+
 async function drainBannerQueue(layer, queue, registerBanner, state) {
   while (queue.length && state.createdCount < state.targetCount) {
     const building = queue.shift();
@@ -88,11 +140,14 @@ async function drainBannerQueue(layer, queue, registerBanner, state) {
     }
 
     try {
-      const summary = await fetchArticleSummary(building.title);
+      const summary = await wikiApi.fetchArticleSummary(building.title);
+      const suppressBanner = typeof wikiApi.shouldSuppressBanner === "function"
+        ? wikiApi.shouldSuppressBanner(summary)
+        : false;
       if (
         summary.imageMode !== "live" ||
         !summary.imageUrl ||
-        shouldSuppressBanner(summary)
+        suppressBanner
       ) {
         continue;
       }
@@ -186,6 +241,48 @@ function createBannerGroup(building, baseTexture) {
   return group;
 }
 
+function createFeaturePosterGroup(building, baseTexture, posterConfig = {}) {
+  const group = new THREE.Group();
+  const side = selectPosterFacade(building, posterConfig.facade, 0.95);
+  const textureAspect = getTextureAspect(baseTexture);
+  const posterWidth = side.width * 0.92;
+  const posterHeight = clamp(
+    posterWidth / textureAspect,
+    18,
+    Math.min(building.height * 0.32, 42),
+  );
+  const centerY = clamp(
+    building.height * (posterConfig.heightRatio ?? 0.58),
+    posterHeight / 2 + 28,
+    building.height - posterHeight / 2 - 34,
+  );
+
+  const backing = new THREE.Mesh(panelGeometry, posterBackingMaterial);
+  backing.position.set(
+    side.position[0] - side.normalX * 0.08,
+    centerY,
+    side.position[2] - side.normalZ * 0.08,
+  );
+  backing.rotation.y = side.rotationY;
+  backing.scale.set(posterWidth + 4.8, posterHeight + 5.4, 1);
+  backing.renderOrder = 29;
+  group.add(backing);
+
+  const poster = new THREE.Mesh(panelGeometry, createPosterMaterial(baseTexture));
+  poster.position.set(
+    side.position[0] + side.normalX * 0.08,
+    centerY,
+    side.position[2] + side.normalZ * 0.08,
+  );
+  poster.rotation.y = side.rotationY;
+  poster.scale.set(posterWidth, posterHeight, 1);
+  poster.renderOrder = 30;
+  group.add(poster);
+
+  addPosterStaples(group, side, centerY, posterWidth, posterHeight);
+  return group;
+}
+
 function createBannerMaterial(baseTexture, repeatX) {
   const map = baseTexture.clone();
   map.wrapS = THREE.RepeatWrapping;
@@ -203,6 +300,22 @@ function createBannerMaterial(baseTexture, repeatX) {
   });
 }
 
+function createPosterMaterial(baseTexture) {
+  const map = baseTexture.clone();
+  map.wrapS = THREE.ClampToEdgeWrapping;
+  map.wrapT = THREE.ClampToEdgeWrapping;
+  map.needsUpdate = true;
+
+  return new THREE.MeshBasicMaterial({
+    map,
+    transparent: true,
+    opacity: 0.98,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    toneMapped: false,
+  });
+}
+
 function loadBannerTexture(imageUrl) {
   return new Promise((resolve, reject) => {
     imageLoader.load(
@@ -211,6 +324,23 @@ function loadBannerTexture(imageUrl) {
         try {
           const texture = createCroppedBannerTexture(image);
           resolve(texture);
+        } catch (error) {
+          reject(error);
+        }
+      },
+      undefined,
+      reject,
+    );
+  });
+}
+
+function loadPosterTexture(imageUrl) {
+  return new Promise((resolve, reject) => {
+    imageLoader.load(
+      imageUrl,
+      (image) => {
+        try {
+          resolve(createPosterTexture(image));
         } catch (error) {
           reject(error);
         }
@@ -255,6 +385,136 @@ function createCroppedBannerTexture(image) {
   texture.generateMipmaps = false;
   texture.needsUpdate = true;
   return texture;
+}
+
+function createPosterTexture(image) {
+  const texture = new THREE.Texture(image);
+  texture.encoding = THREE.sRGBEncoding;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function addPosterStaples(group, side, centerY, posterWidth, posterHeight) {
+  const stapleSize = 1.55;
+  const insetX = posterWidth / 2 - 1.7;
+  const insetY = posterHeight / 2 - 1.8;
+  const corners = [
+    [-insetX, insetY],
+    [insetX, insetY],
+    [-insetX, -insetY],
+    [insetX, -insetY],
+  ];
+
+  for (const [localX, localY] of corners) {
+    const staple = new THREE.Mesh(panelGeometry, stapleMaterial);
+    const worldOffset = rotateOffsetByY(localX, 0, side.rotationY);
+    staple.position.set(
+      side.position[0] + worldOffset.x + side.normalX * 0.14,
+      centerY + localY,
+      side.position[2] + worldOffset.z + side.normalZ * 0.14,
+    );
+    staple.rotation.y = side.rotationY;
+    staple.scale.set(stapleSize, stapleSize, 1);
+    staple.renderOrder = 31;
+    group.add(staple);
+  }
+}
+
+function selectPosterFacade(building, facade, offset) {
+  switch (facade) {
+    case "north":
+      return {
+        width: building.width,
+        position: [building.x, 0, building.z + building.depth / 2 + offset],
+        rotationY: 0,
+        normalX: 0,
+        normalZ: 1,
+      };
+    case "south":
+      return {
+        width: building.width,
+        position: [building.x, 0, building.z - building.depth / 2 - offset],
+        rotationY: Math.PI,
+        normalX: 0,
+        normalZ: -1,
+      };
+    case "east":
+      return {
+        width: building.depth,
+        position: [building.x + building.width / 2 + offset, 0, building.z],
+        rotationY: -Math.PI / 2,
+        normalX: 1,
+        normalZ: 0,
+      };
+    case "west":
+      return {
+        width: building.depth,
+        position: [building.x - building.width / 2 - offset, 0, building.z],
+        rotationY: Math.PI / 2,
+        normalX: -1,
+        normalZ: 0,
+      };
+    default:
+      return selectInteriorFacingFacade(building, offset);
+  }
+}
+
+function selectInteriorFacingFacade(building, offset) {
+  if (Math.abs(building.x) > Math.abs(building.z)) {
+    if (building.x > 0) {
+      return {
+        width: building.depth,
+        position: [building.x - building.width / 2 - offset, 0, building.z],
+        rotationY: Math.PI / 2,
+        normalX: -1,
+        normalZ: 0,
+      };
+    }
+
+    return {
+      width: building.depth,
+      position: [building.x + building.width / 2 + offset, 0, building.z],
+      rotationY: -Math.PI / 2,
+      normalX: 1,
+      normalZ: 0,
+    };
+  }
+
+  if (building.z > 0) {
+    return {
+      width: building.width,
+      position: [building.x, 0, building.z - building.depth / 2 - offset],
+      rotationY: Math.PI,
+      normalX: 0,
+      normalZ: -1,
+    };
+  }
+
+  return {
+    width: building.width,
+    position: [building.x, 0, building.z + building.depth / 2 + offset],
+    rotationY: 0,
+    normalX: 0,
+    normalZ: 1,
+  };
+}
+
+function getTextureAspect(texture) {
+  const width = texture.image?.naturalWidth || texture.image?.videoWidth || texture.image?.width || 1;
+  const height = texture.image?.naturalHeight || texture.image?.videoHeight || texture.image?.height || 1;
+  return width / height;
+}
+
+function rotateOffsetByY(x, z, rotationY) {
+  const cosine = Math.cos(rotationY);
+  const sine = Math.sin(rotationY);
+  return {
+    x: x * cosine + z * sine,
+    z: -x * sine + z * cosine,
+  };
 }
 
 function clamp(value, min, max) {

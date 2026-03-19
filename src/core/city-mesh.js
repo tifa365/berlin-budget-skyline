@@ -1,5 +1,5 @@
 import { THEME } from "../config.js";
-import { createArticleBannerLayer } from "./article-banner-layer.js?v=banner-rise-fix-1";
+import { createArticleBannerLayer } from "./article-banner-layer.js?v=wednesday-poster-2";
 import { createFacadeMaterial } from "./facade-material.js";
 
 const { THREE } = window;

@@ -128,6 +128,26 @@ export function createCameraController({ camera, domElement }) {
   }
 
   function settleAfterFlyover() {
+    if (flyoverEndBuilding) {
+      const building = flyoverEndBuilding;
+      flyoverEndBuilding = null;
+      const view = getBuildingView(building);
+      target.copy(view.target);
+      targetGoal.copy(view.target);
+      const dx = camera.position.x - target.x;
+      const dy = camera.position.y - target.y;
+      const dz = camera.position.z - target.z;
+      distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      phi = Math.acos(clamp(dy / distance, -1, 1));
+      theta = Math.atan2(dz, dx);
+      targetTheta = theta;
+      targetPhi = view.phi;
+      targetDistance = view.distance;
+      lerpSpeed = 0.045;
+      idleSeconds = 0;
+      return;
+    }
+
     // Derive orbital parameters from current camera position over the park
     target.set(0, 80, 0);
     targetGoal.set(0, 120, 0);
@@ -157,6 +177,12 @@ export function createCameraController({ camera, domElement }) {
 
       const pos = flyoverCurve.getPoint(eased);
       const look = flyoverLookCurve.getPoint(eased);
+      if (flyoverEndBuilding) {
+        const view = getBuildingView(flyoverEndBuilding);
+        const blend = smoothstep(0.62, 1, eased);
+        pos.lerp(view.position, blend);
+        look.lerp(view.target, blend);
+      }
       camera.position.copy(pos);
       camera.lookAt(look);
       target.copy(look);
@@ -256,6 +282,28 @@ export function createCameraController({ camera, domElement }) {
     isDragging: () => dragging,
     movedSinceDown: () => movedSinceDown,
   };
+}
+
+function getBuildingView(building) {
+  const target = new THREE.Vector3(building.x, building.height * 0.35, building.z);
+  const phi = 0.96;
+  const distance = clamp(
+    Math.max(building.height * 1.9, building.width * 9, building.depth * 9),
+    220,
+    2300,
+  );
+  const sinPhi = Math.sin(phi);
+  const position = new THREE.Vector3(
+    target.x + Math.cos(CAMERA_CONFIG.theta) * sinPhi * distance,
+    target.y + Math.cos(phi) * distance,
+    target.z + Math.sin(CAMERA_CONFIG.theta) * sinPhi * distance,
+  );
+  return { target, position, phi, distance };
+}
+
+function smoothstep(edge0, edge1, value) {
+  const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
 }
 
 function clamp(value, min, max) {
