@@ -1,5 +1,5 @@
 import { ARTICLE_BANNER_CONFIG } from "../config.js";
-import { fetchArticleSummary } from "./wiki-api.js";
+import { fetchArticleSummary, shouldSuppressBanner } from "./wiki-api.js";
 
 const { THREE } = window;
 
@@ -91,7 +91,8 @@ async function drainBannerQueue(layer, queue, registerBanner, state) {
       const summary = await fetchArticleSummary(building.title);
       if (
         summary.imageMode !== "live" ||
-        !summary.imageUrl
+        !summary.imageUrl ||
+        shouldSuppressBanner(summary)
       ) {
         continue;
       }

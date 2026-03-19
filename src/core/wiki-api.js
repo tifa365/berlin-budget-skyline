@@ -53,6 +53,24 @@ const DISTURBING_IMAGE_KEYWORDS = [
   "konzentrationslager",
   "kz",
 ];
+const BANNER_EXCLUSION_KEYWORDS = [
+  "afd",
+  "alternative fur deutschland",
+  "alternative fuer deutschland",
+  "junge alternative",
+  "hitler",
+  "adolf hitler",
+  "nsdap",
+  "nationalsozial",
+  "nationalsozialismus",
+  "nationalsozialist",
+  "neonazi",
+  "neo nazi",
+  "rechtsextrem",
+  "rechtsextremismus",
+  "faschis",
+  "fascis",
+];
 
 const summaryCache = new Map();
 
@@ -114,6 +132,13 @@ export async function fetchArticleSummary(title, { signal } = {}) {
     summaryCache.delete(normalizedTitle);
     throw error;
   }
+}
+
+export function shouldSuppressBanner(summary) {
+  const normalized = normalizeSensitiveText(
+    `${summary.title} ${summary.description} ${summary.extract}`,
+  );
+  return matchesKeyword(normalized, BANNER_EXCLUSION_KEYWORDS);
 }
 
 function normalizeTitle(title) {
