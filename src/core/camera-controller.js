@@ -46,7 +46,7 @@ export function createCameraController({ camera, domElement }) {
     new THREE.Vector3(0, 80, 0),
   ]);
 
-  let flyoverEndBuilding = null;
+  let flyoverEndView = null;
 
   domElement.addEventListener("pointerdown", onPointerDown);
   window.addEventListener("pointermove", onPointerMove);
@@ -128,10 +128,9 @@ export function createCameraController({ camera, domElement }) {
   }
 
   function settleAfterFlyover() {
-    if (flyoverEndBuilding) {
-      const building = flyoverEndBuilding;
-      flyoverEndBuilding = null;
-      const view = getBuildingView(building);
+    if (flyoverEndView) {
+      const view = flyoverEndView;
+      flyoverEndView = null;
       target.copy(view.target);
       targetGoal.copy(view.target);
       const dx = camera.position.x - target.x;
@@ -140,7 +139,7 @@ export function createCameraController({ camera, domElement }) {
       distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
       phi = Math.acos(clamp(dy / distance, -1, 1));
       theta = Math.atan2(dz, dx);
-      targetTheta = theta;
+      targetTheta = typeof view.theta === "number" ? view.theta : theta;
       targetPhi = view.phi;
       targetDistance = view.distance;
       lerpSpeed = 0.045;
@@ -177,8 +176,8 @@ export function createCameraController({ camera, domElement }) {
 
       const pos = flyoverCurve.getPoint(eased);
       const look = flyoverLookCurve.getPoint(eased);
-      if (flyoverEndBuilding) {
-        const view = getBuildingView(flyoverEndBuilding);
+      if (flyoverEndView) {
+        const view = flyoverEndView;
         const blend = smoothstep(0.62, 1, eased);
         pos.lerp(view.position, blend);
         look.lerp(view.target, blend);
@@ -217,10 +216,14 @@ export function createCameraController({ camera, domElement }) {
   }
 
   function startAtBuilding(building) {
+    startAtView(getBuildingView(building));
+  }
+
+  function startAtView(view) {
     // Begin cinematic flyover, end at this building
     flyoverActive = true;
     flyoverT = 0;
-    flyoverEndBuilding = building;
+    flyoverEndView = normalizeFocusView(view);
 
     // Position camera at the start of the spline
     const startPos = flyoverCurve.getPoint(0);
@@ -232,19 +235,46 @@ export function createCameraController({ camera, domElement }) {
   }
 
   function focusBuilding(building) {
+    focusTarget({
+      target: new THREE.Vector3(building.x, building.height * 0.35, building.z),
+      distance: clamp(
+        Math.max(building.height * 1.9, building.width * 9, building.depth * 9),
+        220,
+        2300,
+      ),
+      phi: 0.96,
+      speed: 0.07,
+    });
+  }
+
+  function focusTarget({ target: nextTarget, distance: nextDistance, phi: nextPhi, theta: nextTheta, speed = 0.07, idle = 0 }) {
     if (flyoverActive) {
       flyoverActive = false;
       settleAfterFlyover();
     }
-    targetGoal.set(building.x, building.height * 0.35, building.z);
-    targetDistance = clamp(
-      Math.max(building.height * 1.9, building.width * 9, building.depth * 9),
-      220,
-      2300,
+    targetGoal.copy(nextTarget);
+    targetDistance = nextDistance;
+    if (typeof nextPhi === "number") {
+      targetPhi = clamp(nextPhi, CAMERA_CONFIG.minPhi, CAMERA_CONFIG.maxPhi);
+    }
+    if (typeof nextTheta === "number") {
+      targetTheta = nextTheta;
+    }
+    lerpSpeed = speed;
+    idleSeconds = idle;
+  }
+
+  function isSettled(positionEpsilon = 5, angleEpsilon = 0.01, distanceEpsilon = 8) {
+    if (flyoverActive || dragging) {
+      return false;
+    }
+
+    return (
+      target.distanceTo(targetGoal) <= positionEpsilon &&
+      Math.abs(theta - targetTheta) <= angleEpsilon &&
+      Math.abs(phi - targetPhi) <= angleEpsilon &&
+      Math.abs(distance - targetDistance) <= distanceEpsilon
     );
-    targetPhi = 0.96;
-    lerpSpeed = 0.07;
-    idleSeconds = 0;
   }
 
   function focusPark() {
@@ -275,30 +305,47 @@ export function createCameraController({ camera, domElement }) {
   return {
     update,
     startAtBuilding,
+    startAtView,
     focusBuilding,
+    focusTarget,
     focusPark,
     viewSkyline,
     reset,
+    isSettled,
     isDragging: () => dragging,
     movedSinceDown: () => movedSinceDown,
   };
 }
 
 function getBuildingView(building) {
-  const target = new THREE.Vector3(building.x, building.height * 0.35, building.z);
-  const phi = 0.96;
-  const distance = clamp(
-    Math.max(building.height * 1.9, building.width * 9, building.depth * 9),
-    220,
-    2300,
-  );
-  const sinPhi = Math.sin(phi);
+  return normalizeFocusView({
+    target: new THREE.Vector3(building.x, building.height * 0.35, building.z),
+    phi: 0.96,
+    distance: clamp(
+      Math.max(building.height * 1.9, building.width * 9, building.depth * 9),
+      220,
+      2300,
+    ),
+    theta: CAMERA_CONFIG.theta,
+  });
+}
+
+function normalizeFocusView({ target, distance, phi, theta = CAMERA_CONFIG.theta }) {
+  const clampedPhi = clamp(phi, CAMERA_CONFIG.minPhi, CAMERA_CONFIG.maxPhi);
+  const safeTarget = target.clone ? target.clone() : new THREE.Vector3(target.x, target.y, target.z);
+  const sinPhi = Math.sin(clampedPhi);
   const position = new THREE.Vector3(
-    target.x + Math.cos(CAMERA_CONFIG.theta) * sinPhi * distance,
-    target.y + Math.cos(phi) * distance,
-    target.z + Math.sin(CAMERA_CONFIG.theta) * sinPhi * distance,
+    safeTarget.x + Math.cos(theta) * sinPhi * distance,
+    safeTarget.y + Math.cos(clampedPhi) * distance,
+    safeTarget.z + Math.sin(theta) * sinPhi * distance,
   );
-  return { target, position, phi, distance };
+  return {
+    target: safeTarget,
+    position,
+    phi: clampedPhi,
+    distance,
+    theta,
+  };
 }
 
 function smoothstep(edge0, edge1, value) {

@@ -1,0 +1,11 @@
+Model Information:
+* title:	VICE
+* source:	https://sketchfab.com/3d-models/vice-12bdaeb08a1844b4906e68ef7b884ad4
+* author:	Overtik Studio (https://sketchfab.com/OvertikStudio)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "VICE" (https://sketchfab.com/3d-models/vice-12bdaeb08a1844b4906e68ef7b884ad4) by Overtik Studio (https://sketchfab.com/OvertikStudio) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
