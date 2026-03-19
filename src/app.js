@@ -7,7 +7,7 @@ import {
 } from "./core/formatting.js";
 import { createScene } from "./core/scene.js";
 import { createCarLights } from "./core/car-lights.js";
-import { createCityMesh } from "./core/city-mesh.js";
+import { createCityMesh } from "./core/city-mesh.js?v=banner-rise-fix-1";
 import { createPark } from "./core/park.js";
 import { fetchArticleSummary } from "./core/wiki-api.js";
 import { WIKI_DATA } from "./data/wiki-data.js";

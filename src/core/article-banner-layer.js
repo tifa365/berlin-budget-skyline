@@ -28,9 +28,14 @@ export function createArticleBannerLayer(parentGroup, buildings) {
   const layer = new THREE.Group();
   layer.renderOrder = 26;
   parentGroup.add(layer);
+  const bannerEntries = [];
+  let latestRiseData = null;
 
   if (!ARTICLE_BANNER_CONFIG.enabled) {
-    return { group: layer };
+    return {
+      group: layer,
+      update() {},
+    };
   }
 
   const featuredBuildings = buildings
@@ -39,29 +44,41 @@ export function createArticleBannerLayer(parentGroup, buildings) {
     .slice(0, ARTICLE_BANNER_CONFIG.maxBuildings);
 
   if (!featuredBuildings.length) {
-    return { group: layer };
+    return {
+      group: layer,
+      update() {},
+    };
   }
 
   window.setTimeout(() => {
-    void populateBanners(layer, featuredBuildings);
+    void populateBanners(layer, featuredBuildings, (bannerGroup, buildingIndex) => {
+      bannerEntries.push({ group: bannerGroup, buildingIndex });
+      applyBannerRise(bannerGroup, latestRiseData?.[buildingIndex] ?? 0);
+    });
   }, ARTICLE_BANNER_CONFIG.startDelayMs);
 
   return {
     group: layer,
     featuredBuildings,
+    update(riseData) {
+      latestRiseData = riseData;
+      for (const entry of bannerEntries) {
+        applyBannerRise(entry.group, riseData?.[entry.buildingIndex] ?? 0);
+      }
+    },
   };
 }
 
-async function populateBanners(layer, buildings) {
+async function populateBanners(layer, buildings, registerBanner) {
   const queue = buildings.slice();
   const workers = Array.from(
     { length: ARTICLE_BANNER_CONFIG.loadConcurrency },
-    () => drainBannerQueue(layer, queue),
+    () => drainBannerQueue(layer, queue, registerBanner),
   );
   await Promise.all(workers);
 }
 
-async function drainBannerQueue(layer, queue) {
+async function drainBannerQueue(layer, queue, registerBanner) {
   while (queue.length) {
     const building = queue.shift();
     if (!building) {
@@ -83,6 +100,7 @@ async function drainBannerQueue(layer, queue) {
 
       const bannerGroup = createBannerGroup(building, texture);
       layer.add(bannerGroup);
+      registerBanner(bannerGroup, building.index);
     } catch (error) {
       console.warn(`[banner] ${building.title}: ${error.message}`);
     }
@@ -251,4 +269,10 @@ function createSolidBannerTexture() {
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function applyBannerRise(group, rise) {
+  const clampedRise = clamp(rise, 0, 1);
+  group.visible = clampedRise > 0.002;
+  group.scale.set(1, Math.max(0.002, clampedRise), 1);
 }

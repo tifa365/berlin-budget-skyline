@@ -1,5 +1,5 @@
 import { THEME } from "../config.js";
-import { createArticleBannerLayer } from "./article-banner-layer.js";
+import { createArticleBannerLayer } from "./article-banner-layer.js?v=banner-rise-fix-1";
 import { createFacadeMaterial } from "./facade-material.js";
 
 const { THREE } = window;
@@ -54,7 +54,7 @@ export function createCityMesh(scene, model) {
   let riseComplete = false;
 
   group.add(buildings);
-  createArticleBannerLayer(group, model.buildings);
+  const bannerLayer = createArticleBannerLayer(group, model.buildings) ?? {};
 
   group.add(createUrbanBase(model));
 
@@ -99,6 +99,9 @@ export function createCityMesh(scene, model) {
     }
 
     buildingMaterial.uniforms.uTime.value = elapsedSeconds;
+    if (typeof bannerLayer.update === "function") {
+      bannerLayer.update(riseData);
+    }
     if (!camera) {
       return;
     }
