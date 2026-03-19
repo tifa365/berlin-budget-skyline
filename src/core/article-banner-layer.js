@@ -41,7 +41,7 @@ imageLoader.setCrossOrigin("anonymous");
 const SPECIAL_FACADE_POSTERS = [
   {
     title: "Wednesday (Fernsehserie)",
-    imageUrl: new URL("../../itswednesday.jpg", import.meta.url).href,
+    imageUrl: new URL("../../assets/media/posters/wednesday.jpg", import.meta.url).href,
     facade: "south",
     heightRatio: 0.72,
   },
