@@ -6,8 +6,7 @@ export const APP_CONFIG = {
 
 export const ARTICLE_BANNER_CONFIG = {
   enabled: true,
-  minFloors: 90,
-  maxBuildings: 48,
+  maxBuildings: 20,
   loadConcurrency: 6,
   startDelayMs: 1400,
   facadeOffset: 1.6,

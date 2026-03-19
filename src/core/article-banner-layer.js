@@ -20,7 +20,6 @@ const trimMaterial = new THREE.MeshBasicMaterial({
   depthWrite: false,
   toneMapped: false,
 });
-const redactedTexture = createSolidBannerTexture();
 const imageLoader = new THREE.ImageLoader();
 imageLoader.setCrossOrigin("anonymous");
 
@@ -38,12 +37,11 @@ export function createArticleBannerLayer(parentGroup, buildings) {
     };
   }
 
-  const featuredBuildings = buildings
-    .filter((building) => building.floors >= ARTICLE_BANNER_CONFIG.minFloors)
+  const bannerCandidates = buildings
+    .slice()
     .sort((left, right) => right.floors - left.floors || left.rank - right.rank)
-    .slice(0, ARTICLE_BANNER_CONFIG.maxBuildings);
 
-  if (!featuredBuildings.length) {
+  if (!bannerCandidates.length) {
     return {
       group: layer,
       update() {},
@@ -51,7 +49,7 @@ export function createArticleBannerLayer(parentGroup, buildings) {
   }
 
   window.setTimeout(() => {
-    void populateBanners(layer, featuredBuildings, (bannerGroup, buildingIndex) => {
+    void populateBanners(layer, bannerCandidates, (bannerGroup, buildingIndex) => {
       bannerEntries.push({ group: bannerGroup, buildingIndex });
       applyBannerRise(bannerGroup, latestRiseData?.[buildingIndex] ?? 0);
     });
@@ -59,7 +57,7 @@ export function createArticleBannerLayer(parentGroup, buildings) {
 
   return {
     group: layer,
-    featuredBuildings,
+    featuredBuildings: bannerCandidates.slice(0, ARTICLE_BANNER_CONFIG.maxBuildings),
     update(riseData) {
       latestRiseData = riseData;
       for (const entry of bannerEntries) {
@@ -71,15 +69,19 @@ export function createArticleBannerLayer(parentGroup, buildings) {
 
 async function populateBanners(layer, buildings, registerBanner) {
   const queue = buildings.slice();
+  const state = {
+    createdCount: 0,
+    targetCount: ARTICLE_BANNER_CONFIG.maxBuildings,
+  };
   const workers = Array.from(
     { length: ARTICLE_BANNER_CONFIG.loadConcurrency },
-    () => drainBannerQueue(layer, queue, registerBanner),
+    () => drainBannerQueue(layer, queue, registerBanner, state),
   );
   await Promise.all(workers);
 }
 
-async function drainBannerQueue(layer, queue, registerBanner) {
-  while (queue.length) {
+async function drainBannerQueue(layer, queue, registerBanner, state) {
+  while (queue.length && state.createdCount < state.targetCount) {
     const building = queue.shift();
     if (!building) {
       return;
@@ -87,19 +89,24 @@ async function drainBannerQueue(layer, queue, registerBanner) {
 
     try {
       const summary = await fetchArticleSummary(building.title);
-      if (summary.imageMode === "none") {
+      if (
+        summary.imageMode !== "live" ||
+        !summary.imageUrl
+      ) {
         continue;
       }
 
-      const texture = summary.imageMode === "redacted"
-        ? redactedTexture
-        : await loadBannerTexture(summary.imageUrl);
+      const texture = await loadBannerTexture(summary.imageUrl);
       if (!texture) {
         continue;
+      }
+      if (state.createdCount >= state.targetCount) {
+        return;
       }
 
       const bannerGroup = createBannerGroup(building, texture);
       layer.add(bannerGroup);
+      state.createdCount += 1;
       registerBanner(bannerGroup, building.index);
     } catch (error) {
       console.warn(`[banner] ${building.title}: ${error.message}`);
@@ -238,24 +245,6 @@ function createCroppedBannerTexture(image) {
   gradient.addColorStop(0.88, "rgba(4, 8, 14, 0)");
   gradient.addColorStop(1, "rgba(4, 8, 14, 0.34)");
   context.fillStyle = gradient;
-  context.fillRect(0, 0, canvas.width, canvas.height);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.encoding = THREE.sRGBEncoding;
-  texture.minFilter = THREE.LinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  texture.generateMipmaps = false;
-  texture.needsUpdate = true;
-  return texture;
-}
-
-function createSolidBannerTexture() {
-  const canvas = document.createElement("canvas");
-  canvas.width = ARTICLE_BANNER_CONFIG.textureWidth;
-  canvas.height = ARTICLE_BANNER_CONFIG.textureHeight;
-
-  const context = canvas.getContext("2d");
-  context.fillStyle = "#000000";
   context.fillRect(0, 0, canvas.width, canvas.height);
 
   const texture = new THREE.CanvasTexture(canvas);
