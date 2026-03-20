@@ -1,21 +1,20 @@
-const viewFormatter = new Intl.NumberFormat("en-US", {
+const amountCompactFormatter = new Intl.NumberFormat("de-DE", {
+  style: "currency",
+  currency: "EUR",
   notation: "compact",
   maximumFractionDigits: 1,
 });
 
-const wordFormatter = new Intl.NumberFormat("en-US", {
-  notation: "compact",
-  maximumFractionDigits: 1,
+const amountFormatter = new Intl.NumberFormat("de-DE", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
 });
 
-const integerFormatter = new Intl.NumberFormat("en-US");
+const integerFormatter = new Intl.NumberFormat("de-DE");
 
-export function formatViews(value) {
-  return viewFormatter.format(value);
-}
-
-export function formatWords(value) {
-  return wordFormatter.format(value);
+export function formatAmount(value, { compact = false } = {}) {
+  return compact ? amountCompactFormatter.format(value) : amountFormatter.format(value);
 }
 
 export function formatInteger(value) {
@@ -24,19 +23,13 @@ export function formatInteger(value) {
 
 export function describeRank(rank) {
   if (rank === 1) {
-    return "The single most-viewed article in the dataset.";
+    return "The largest single budget item in this local dataset.";
   }
   if (rank <= 10) {
-    return "One of the 10 most-viewed articles in the dataset.";
+    return "One of the 10 largest budget items in this dataset.";
   }
   if (rank <= 100) {
-    return "A top-100 article by views.";
+    return "One of the larger Berlin budget items shown here.";
   }
-  if (rank <= 1000) {
-    return "A top-1,000 article by views.";
-  }
-  if (rank <= 10000) {
-    return "Still inside the top 10,000 articles by views.";
-  }
-  return "Part of the 100,000-article skyline.";
+  return "Part of the Berlin budget skyline.";
 }

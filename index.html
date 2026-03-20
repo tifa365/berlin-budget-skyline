@@ -3,26 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WikiCity</title>
-  <meta name="description" content="Explore Wikipedia articles as a Three.js city skyline.">
+  <title>Berlin Budget City</title>
+  <meta name="description" content="Explore Berlin budget items as a Three.js city skyline.">
   <link rel="icon" type="image/png" href="./assets/favicon.png">
   <link rel="stylesheet" href="./styles/app.css?v=wednesday-poster-1">
   <script src="./assets/vendor/three.min.js"></script>
   <script src="./assets/vendor/GLTFLoader.js"></script>
-  <script type="module" src="./src/app.js?v=vice-pink-1"></script>
+  <script type="module" src="./src/app.js?v=vice-outline-shape-1"></script>
 </head>
 <body>
   <div id="app">
     <div id="loading" class="loading">
-      <h1 class="loading__title">wiki.city</h1>
-      <p id="loadingStatus" class="loading__status">Preparing article dataset...</p>
+      <h1 class="loading__title">budget.city</h1>
+      <p id="loadingStatus" class="loading__status">Preparing Berlin budget dataset...</p>
     </div>
 
     <div id="stage" class="stage" aria-label="3D city explorer"></div>
 
-    <section class="search-shell" aria-label="Search articles">
+    <section class="search-shell" aria-label="Search budget items">
       <button id="closeSearch" class="search-shell__close" type="button" aria-label="Close search">×</button>
-      <input id="articleSearch" class="search-input" type="text" placeholder="Search articles..." autocomplete="off" spellcheck="false" aria-label="Search articles">
+      <div class="search-filters">
+        <label class="search-filter">
+          <span>Year</span>
+          <select id="yearFilter" class="search-select" aria-label="Filter by year">
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+            <option value="all">All years</option>
+          </select>
+        </label>
+        <label class="search-filter">
+          <span>Type</span>
+          <select id="typeFilter" class="search-select" aria-label="Filter by title type">
+            <option value="ausgaben">Ausgaben</option>
+            <option value="einnahmen">Einnahmen</option>
+            <option value="all">Alles</option>
+          </select>
+        </label>
+      </div>
+      <input id="articleSearch" class="search-input" type="text" placeholder="Search budget items..." autocomplete="off" spellcheck="false" aria-label="Search budget items">
       <div id="searchResults" class="search-results" role="listbox"></div>
     </section>
 
@@ -30,9 +48,9 @@
     <button id="skylineBtn" class="skyline-btn" type="button" aria-label="Watch the skyline" title="Watch the skyline">🏙️</button>
     <div id="tooltip" class="tooltip" role="status" aria-live="polite"></div>
 
-    <aside id="inspector" class="inspector" aria-label="Article details">
-      <button id="closeInspector" class="inspector__close" type="button" aria-label="Close article details">×</button>
-      <p class="inspector__eyebrow">Selected Article</p>
+    <aside id="inspector" class="inspector" aria-label="Budget item details">
+      <button id="closeInspector" class="inspector__close" type="button" aria-label="Close budget item details">×</button>
+      <p class="inspector__eyebrow">Selected Budget Item</p>
       <h2 id="articleTitle" class="inspector__title"></h2>
       <p id="articleTagline" class="inspector__tagline"></p>
 
@@ -41,7 +59,7 @@
       </figure>
 
       <section class="article-summary" aria-live="polite">
-        <p id="articleSummaryState" class="article-summary__state">Select an article to load its live Wikipedia preview.</p>
+        <p id="articleSummaryState" class="article-summary__state">Select a budget item to load its Berlin budget details.</p>
         <p id="articleDescription" class="article-summary__description" hidden></p>
         <p id="articleExtract" class="article-summary__extract" hidden></p>
       </section>
@@ -52,11 +70,11 @@
           <dd id="articleRank">-</dd>
         </div>
         <div class="stats-grid__item">
-          <dt>Views</dt>
+          <dt>Budget</dt>
           <dd id="articleViews">-</dd>
         </div>
         <div class="stats-grid__item">
-          <dt>Page Size</dt>
+          <dt>Code / Jahr</dt>
           <dd id="articleWords">-</dd>
         </div>
         <div class="stats-grid__item">
@@ -65,7 +83,7 @@
         </div>
       </dl>
 
-      <a id="articleLink" class="article-link" href="https://de.wikipedia.org/wiki/Hauptseite" target="_blank" rel="noopener">Open on German Wikipedia</a>
+      <a id="articleLink" class="article-link" href="https://haushaltsdaten.odis-berlin.de/visualisierung/" target="_blank" rel="noopener">Open in Berliner Haushaltsdaten</a>
 
       <section class="neighbors">
         <div class="neighbors__header">

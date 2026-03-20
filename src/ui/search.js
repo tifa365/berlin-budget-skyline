@@ -1,4 +1,4 @@
-import { formatInteger, formatViews } from "../core/formatting.js";
+import { formatAmount, formatInteger } from "../core/formatting.js";
 
 export function createSearch({
   shell,
@@ -116,7 +116,7 @@ export function createSearch({
 
       const meta = document.createElement("span");
       meta.className = "search-result__meta";
-      meta.textContent = `${formatViews(match.views)} views • #${formatInteger(match.rank)}`;
+      meta.textContent = `${match.code} • ${match.year} • ${formatAmount(match.views, { compact: true })}`;
 
       button.append(title, meta);
       results.appendChild(button);

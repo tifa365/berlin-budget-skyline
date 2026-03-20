@@ -79,7 +79,7 @@ export function buildCityModel(rawArticles) {
     lotAssignments[remainingLotIndexes[index]] = article;
   });
 
-  const maxViews = articles[0].views;
+  const maxViews = Math.max(...articles.map((article) => article.sizeMetric ?? Math.abs(article.views)));
   const totalViews = articles.reduce((sum, article) => sum + article.views, 0);
   const buildings = lots.map((lot, index) =>
     createBuilding(index, lot, lotAssignments[index], maxViews),
@@ -104,7 +104,8 @@ export function buildCityModel(rawArticles) {
 }
 
 function createBuilding(index, lot, article, maxViews) {
-  const intensity = Math.pow(article.views / maxViews, 0.25);
+  const relativeSize = (article.sizeMetric ?? Math.abs(article.views)) / maxViews;
+  const intensity = Math.pow(relativeSize, 0.25);
   const height =
     LAYOUT_CONFIG.minHeight +
     intensity * (LAYOUT_CONFIG.maxHeight - LAYOUT_CONFIG.minHeight);
@@ -124,6 +125,15 @@ function createBuilding(index, lot, article, maxViews) {
     words: article.words,
     views: article.views,
     rank: article.rank,
+    sizeMetric: article.sizeMetric ?? Math.abs(article.views),
+    area: article.area || "",
+    responsibility: article.responsibility || "",
+    year: article.year || "",
+    url: article.url || "",
+    plan: article.plan || "",
+    chapter: article.chapter || "",
+    code: article.code || "",
+    titleType: article.titleType || "A",
   };
 }
 

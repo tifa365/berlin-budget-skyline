@@ -1,10 +1,9 @@
 import {
   describeRank,
+  formatAmount,
   formatInteger,
-  formatViews,
-  formatWords,
 } from "../core/formatting.js";
-import { buildArticleUrl } from "../core/wiki-api.js";
+import { buildBudgetItemUrl } from "../core/budget-api.js";
 
 const REDACTED_PREVIEW_SRC =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 192'%3E%3Crect width='512' height='192' fill='%23000000'/%3E%3C/svg%3E";
@@ -37,11 +36,11 @@ export function createInspector(elements, handlers) {
     title.textContent = building.title;
     tagline.textContent = describeRank(building.rank);
     rank.textContent = `#${formatInteger(building.rank)}`;
-    views.textContent = formatViews(building.views);
-    words.textContent = formatWords(building.words);
+    views.textContent = formatAmount(building.views);
+    words.textContent = `${building.code} • ${building.year}`;
     floors.textContent = formatInteger(building.floors);
-    link.href = buildArticleUrl(building.title);
-    resetArticlePreview("Loading live Wikipedia preview...");
+    link.href = building.url || buildBudgetItemUrl();
+    resetArticlePreview("Loading Berlin budget item details...");
 
     neighborList.replaceChildren();
     neighbors.forEach((neighbor) => {
@@ -55,7 +54,7 @@ export function createInspector(elements, handlers) {
 
       const metaLine = document.createElement("span");
       metaLine.className = "neighbor-list__meta";
-      metaLine.textContent = `${formatViews(neighbor.views)} views • #${formatInteger(neighbor.rank)}`;
+      metaLine.textContent = `${neighbor.code} • ${neighbor.year} • ${formatAmount(neighbor.views, { compact: true })}`;
 
       button.append(titleLine, metaLine);
       neighborList.appendChild(button);
@@ -73,12 +72,12 @@ export function createInspector(elements, handlers) {
     hide,
     applyArticlePreview(summary) {
       title.textContent = summary.title || title.textContent;
-      link.href = summary.url || buildArticleUrl(summary.title || title.textContent);
+      link.href = summary.url || buildBudgetItemUrl();
 
       if (summary.imageMode === "redacted") {
         preview.hidden = false;
         image.src = REDACTED_PREVIEW_SRC;
-        image.alt = "Preview hidden for sensitive article";
+        image.alt = "Preview hidden";
       } else if (summary.imageUrl) {
         preview.hidden = false;
         image.src = summary.imageUrl;
@@ -104,7 +103,7 @@ export function createInspector(elements, handlers) {
         extract.hidden = true;
         extract.textContent = "";
         summaryState.hidden = false;
-        summaryState.textContent = "No live summary is available for this article.";
+        summaryState.textContent = "No additional budget summary is available for this item.";
       }
     },
     showArticlePreviewError() {
@@ -114,7 +113,7 @@ export function createInspector(elements, handlers) {
       extract.hidden = true;
       extract.textContent = "";
       summaryState.hidden = false;
-      summaryState.textContent = "Live Wikipedia preview unavailable right now.";
+      summaryState.textContent = "Budget details are unavailable right now.";
     },
   };
 

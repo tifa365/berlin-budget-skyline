@@ -5,7 +5,7 @@ export const APP_CONFIG = {
 };
 
 export const ARTICLE_BANNER_CONFIG = {
-  enabled: true,
+  enabled: false,
   maxBuildings: 20,
   loadConcurrency: 6,
   startDelayMs: 1400,

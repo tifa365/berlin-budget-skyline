@@ -2,15 +2,15 @@ import { APP_CONFIG } from "./config.js";
 import { buildCityModel } from "./core/city-data.js";
 import { createCameraController } from "./core/camera-controller.js?v=vice-intro-1";
 import {
+  formatAmount,
   formatInteger,
-  formatViews,
 } from "./core/formatting.js";
 import { createScene } from "./core/scene.js";
 import { createCarLights } from "./core/car-lights.js";
 import { createCityMesh } from "./core/city-mesh.js?v=wednesday-poster-2";
 import { createPark } from "./core/park.js";
-import { fetchArticleSummary } from "./core/wiki-api.js";
-import { WIKI_DATA } from "./data/wiki-data.js";
+import { fetchBudgetSummary } from "./core/budget-api.js";
+import { BERLIN_BUDGET_DATA } from "./data/budget-data.js";
 import { createInspector } from "./ui/panel.js";
 import { createSearch } from "./ui/search.js?v=search-close-fix-2";
 
@@ -20,20 +20,41 @@ const stage = document.getElementById("stage");
 const loading = document.getElementById("loading");
 const loadingStatus = document.getElementById("loadingStatus");
 const tooltip = document.getElementById("tooltip");
+const yearFilter = document.getElementById("yearFilter");
+const typeFilter = document.getElementById("typeFilter");
 const BATMAN_SOUND_URL = new URL("../assets/media/audio/transition.mp3", import.meta.url).href;
 const VICE_SIGN_MODEL_URL = new URL("../assets/models/vice-sign/scene.gltf", import.meta.url).href;
 const VICE_SIGN_COLOR = 0xec76aa;
+const DEFAULT_FILTERS = {
+  year: "2026",
+  type: "ausgaben",
+};
+const activeFilters = readActiveFilters();
 
-setLoading("Preparing article dataset...");
+applyFilterControls(activeFilters);
+setLoading(`Preparing Berlin budget dataset (${describeFilters(activeFilters)})...`);
 
 requestAnimationFrame(() => {
-  const articles = WIKI_DATA.map((entry) => ({
+  const articles = BERLIN_BUDGET_DATA.map((entry) => ({
     title: entry.t,
-    words: entry.w,
-    views: entry.v,
-  }));
+    words: 0,
+    views: entry.a,
+    sizeMetric: Math.abs(entry.a),
+    area: entry.h,
+    responsibility: entry.r,
+    year: entry.y,
+    plan: entry.e,
+    chapter: entry.k,
+    code: entry.c,
+    titleType: entry.x,
+  })).filter((entry) => matchesFilters(entry, activeFilters));
 
-  setLoading("Plotting the skyline...");
+  if (!articles.length) {
+    setLoading(`No budget items found for ${describeFilters(activeFilters)}.`);
+    return;
+  }
+
+  setLoading(`Plotting ${describeFilters(activeFilters)}...`);
 
   requestAnimationFrame(() => {
     const skylineBtn = document.getElementById("skylineBtn");
@@ -59,6 +80,8 @@ requestAnimationFrame(() => {
     const introView = gtaViceBuilding ? createViceIntroView(gtaViceBuilding) : null;
     let batmanModel = null;
     let batmanSelectionOutline = null;
+    let viceSignModel = null;
+    let viceSelectionOutline = null;
     const loader = new THREE.GLTFLoader();
     loader.load("./assets/models/batman/scene.gltf", (gltf) => {
       console.log("Batman loaded", gltf);
@@ -72,7 +95,7 @@ requestAnimationFrame(() => {
       );
       sceneState.scene.add(batman);
       batmanModel = batman;
-      batmanSelectionOutline = createBatmanSelectionOutline(batmanModel);
+      batmanSelectionOutline = createModelSelectionOutline(batmanModel);
       if (batmanSelectionOutline) {
         batmanModel.add(batmanSelectionOutline);
       }
@@ -82,6 +105,13 @@ requestAnimationFrame(() => {
         const viceBillboard = createRooftopViceBillboard(gltf.scene, gtaViceBuilding);
         if (viceBillboard) {
           sceneState.scene.add(viceBillboard);
+          viceSignModel = viceBillboard;
+          viceSelectionOutline = createModelSelectionOutline(viceSignModel, {
+            includeNode: isViceOutlineNode,
+          });
+          if (viceSelectionOutline) {
+            viceSignModel.add(viceSelectionOutline);
+          }
         }
       }, undefined, (err) => console.error("VICE sign load error", err));
     }
@@ -129,6 +159,8 @@ requestAnimationFrame(() => {
         title: building.title,
         views: building.views,
         rank: building.rank,
+        year: building.year,
+        code: building.code,
       })),
       onSelect: selectBuilding,
       limit: APP_CONFIG.searchLimit,
@@ -179,12 +211,28 @@ requestAnimationFrame(() => {
       }
 
       updatePointer(event);
+      const viceHit = pickViceHit();
       const batmanHit = pickBatmanHit();
       const buildingHit = pickBuildingHit();
+      if (
+        viceHit &&
+        (!batmanHit || viceHit.distance <= batmanHit.distance + 2) &&
+        (!buildingHit || viceHit.distance <= buildingHit.distance + 4)
+      ) {
+        cancelBatmanSound();
+        if (selectedIndex >= 0) {
+          clearSelection();
+        }
+        clearBatmanSelection();
+        selectViceSign();
+        focusViceSign();
+        return;
+      }
       if (batmanHit && (!buildingHit || batmanHit.distance <= buildingHit.distance + 4)) {
         if (selectedIndex >= 0) {
           clearSelection();
         }
+        clearViceSelection();
         selectBatman();
         if (focusBatman()) {
           queueBatmanSound();
@@ -195,18 +243,22 @@ requestAnimationFrame(() => {
       const index = buildingHit?.index ?? -1;
       if (index >= 0 && index !== selectedIndex) {
         clearBatmanSelection();
+        clearViceSelection();
         selectBuilding(index);
       } else if (selectedIndex >= 0) {
         clearBatmanSelection();
+        clearViceSelection();
         clearSelection();
         setTimeout(() => cameraController.reset(), 1000);
       } else if (pickPark()) {
         clearBatmanSelection();
+        clearViceSelection();
         console.log("Park clicked!");
         cameraController.focusPark();
         skylineBtn.classList.add("is-visible");
       } else {
         clearBatmanSelection();
+        clearViceSelection();
       }
     });
 
@@ -241,6 +293,23 @@ requestAnimationFrame(() => {
       raycaster.setFromCamera(pointer, sceneState.camera);
       batmanModel.updateMatrixWorld(true);
       const hits = raycaster.intersectObject(batmanModel, true);
+      if (!hits.length) {
+        return null;
+      }
+
+      return {
+        distance: hits[0].distance,
+      };
+    }
+
+    function pickViceHit() {
+      if (!viceSignModel) {
+        return null;
+      }
+
+      raycaster.setFromCamera(pointer, sceneState.camera);
+      viceSignModel.updateMatrixWorld(true);
+      const hits = raycaster.intersectObject(viceSignModel, true);
       if (!hits.length) {
         return null;
       }
@@ -285,6 +354,18 @@ requestAnimationFrame(() => {
       }
     }
 
+    function selectViceSign() {
+      if (viceSelectionOutline) {
+        viceSelectionOutline.visible = true;
+      }
+    }
+
+    function clearViceSelection() {
+      if (viceSelectionOutline) {
+        viceSelectionOutline.visible = false;
+      }
+    }
+
     function focusBatman() {
       if (!batmanModel) {
         playBatmanSound();
@@ -312,6 +393,18 @@ requestAnimationFrame(() => {
         target,
         distance: focusDistance,
         phi: 0.88,
+        speed: 0.09,
+      });
+      return true;
+    }
+
+    function focusViceSign() {
+      if (!gtaViceBuilding) {
+        return false;
+      }
+
+      cameraController.focusTarget({
+        ...createViceIntroView(gtaViceBuilding),
         speed: 0.09,
       });
       return true;
@@ -361,7 +454,7 @@ requestAnimationFrame(() => {
       previewController = new AbortController();
 
       try {
-        const summary = await fetchArticleSummary(building.title, {
+        const summary = await fetchBudgetSummary(building, {
           signal: previewController.signal,
         });
         if (requestId !== previewRequestId || selectedIndex !== building.index) {
@@ -372,7 +465,7 @@ requestAnimationFrame(() => {
         if (error?.name === "AbortError") {
           return;
         }
-        console.error("Wikipedia preview error", error);
+        console.error("Budget preview error", error);
         if (requestId !== previewRequestId || selectedIndex !== building.index) {
           return;
         }
@@ -395,7 +488,7 @@ requestAnimationFrame(() => {
 
       const meta = document.createElement("span");
       meta.className = "tooltip__meta";
-      meta.textContent = `${formatViews(building.views)} views • #${formatInteger(building.rank)}`;
+      meta.textContent = `${building.code} • ${building.year} • ${formatAmount(building.views, { compact: true })}`;
 
       tooltip.append(title, meta);
       tooltip.style.left = `${Math.min(pointerX + 16, window.innerWidth - 280)}px`;
@@ -449,6 +542,9 @@ requestAnimationFrame(() => {
   });
 });
 
+yearFilter?.addEventListener("change", handleFilterChange);
+typeFilter?.addEventListener("change", handleFilterChange);
+
 function findNearestNeighbors(buildings, index, limit) {
   const current = buildings[index];
   const best = [];
@@ -481,7 +577,67 @@ function setLoading(message) {
   loadingStatus.textContent = message;
 }
 
-function createBatmanSelectionOutline(root) {
+function readActiveFilters() {
+  const params = new URLSearchParams(window.location.search);
+  const year = ["2026", "2027", "all"].includes(params.get("year")) ? params.get("year") : DEFAULT_FILTERS.year;
+  const type = ["ausgaben", "einnahmen", "all"].includes(params.get("type")) ? params.get("type") : DEFAULT_FILTERS.type;
+  return { year, type };
+}
+
+function applyFilterControls(filters) {
+  if (yearFilter) {
+    yearFilter.value = filters.year;
+  }
+  if (typeFilter) {
+    typeFilter.value = filters.type;
+  }
+}
+
+function handleFilterChange() {
+  const params = new URLSearchParams(window.location.search);
+  const nextYear = yearFilter?.value || DEFAULT_FILTERS.year;
+  const nextType = typeFilter?.value || DEFAULT_FILTERS.type;
+
+  if (nextYear === DEFAULT_FILTERS.year) {
+    params.delete("year");
+  } else {
+    params.set("year", nextYear);
+  }
+
+  if (nextType === DEFAULT_FILTERS.type) {
+    params.delete("type");
+  } else {
+    params.set("type", nextType);
+  }
+
+  const query = params.toString();
+  const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+  window.location.assign(nextUrl);
+}
+
+function matchesFilters(entry, filters) {
+  if (filters.year !== "all" && String(entry.year) !== filters.year) {
+    return false;
+  }
+  if (filters.type === "ausgaben" && entry.titleType !== "A") {
+    return false;
+  }
+  if (filters.type === "einnahmen" && entry.titleType !== "E") {
+    return false;
+  }
+  return true;
+}
+
+function describeFilters(filters) {
+  const yearLabel = filters.year === "all" ? "all years" : filters.year;
+  const typeLabel =
+    filters.type === "ausgaben" ? "spending items" :
+      filters.type === "einnahmen" ? "revenue items" :
+        "all title types";
+  return `${typeLabel}, ${yearLabel}`;
+}
+
+function createModelSelectionOutline(root, { includeNode } = {}) {
   if (!root) {
     return null;
   }
@@ -494,13 +650,16 @@ function createBatmanSelectionOutline(root) {
     transparent: true,
     opacity: 0.96,
     depthWrite: false,
-    depthTest: true,
+    depthTest: false,
     toneMapped: false,
   });
 
   let lineCount = 0;
   root.traverse((node) => {
     if (!node.isMesh || !node.geometry) {
+      return;
+    }
+    if (typeof includeNode === "function" && !includeNode(node)) {
       return;
     }
 
@@ -527,6 +686,22 @@ function createBatmanSelectionOutline(root) {
 
   outlineGroup.visible = false;
   return lineCount ? outlineGroup : null;
+}
+
+function isViceOutlineNode(node) {
+  if (!node?.isMesh || !node.geometry) {
+    return false;
+  }
+
+  if (node.name === "Object_5") {
+    return false;
+  }
+
+  if (node.name === "Object_4") {
+    return true;
+  }
+
+  return (node.geometry.attributes.position?.count ?? 0) > 1000;
 }
 
 function createRooftopViceBillboard(modelRoot, building) {
