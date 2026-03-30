@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Berlin Budget City icon">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0d1e35"/>
+      <stop offset="100%" stop-color="#07111e"/>
+    </linearGradient>
+    <linearGradient id="bars" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#7fd3ff"/>
+      <stop offset="100%" stop-color="#ffd166"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <rect x="11" y="34" width="8" height="18" rx="2" fill="url(#bars)"/>
+  <rect x="23" y="26" width="8" height="26" rx="2" fill="url(#bars)"/>
+  <rect x="35" y="18" width="8" height="34" rx="2" fill="url(#bars)"/>
+  <rect x="47" y="10" width="8" height="42" rx="2" fill="url(#bars)"/>
+  <path d="M9 52h46" stroke="#eaf3ff" stroke-width="2.5" stroke-linecap="round" opacity="0.65"/>
+  <path d="M18 15c4.5-4.8 12.4-4.8 16.9 0" fill="none" stroke="#eaf3ff" stroke-width="3" stroke-linecap="round"/>
+  <path d="M23.5 20.2c1.7-1.9 4.7-1.9 6.4 0" fill="none" stroke="#eaf3ff" stroke-width="2.4" stroke-linecap="round"/>
+</svg>
