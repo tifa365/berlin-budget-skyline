@@ -1,1 +1,5 @@
 *.binz
+AGENTS.md
+tmp/
+scripts/__pycache__/
+*.pyc
