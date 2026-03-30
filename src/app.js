@@ -12,7 +12,7 @@ import { createPark } from "./core/park.js";
 import { fetchBudgetSummary } from "./core/budget-api.js";
 import { BERLIN_BUDGET_DATA } from "./data/budget-data.js";
 import { createInspector } from "./ui/panel.js";
-import { createSearch } from "./ui/search.js?v=search-close-fix-2";
+import { createSearch } from "./ui/search.js?v=search-shortcuts-1";
 
 const { THREE } = window;
 

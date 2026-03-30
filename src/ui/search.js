@@ -1,4 +1,4 @@
-import { formatAmount, formatInteger } from "../core/formatting.js";
+import { formatAmount } from "../core/formatting.js";
 
 export function createSearch({
   shell,
@@ -17,16 +17,52 @@ export function createSearch({
     .sort((left, right) => left.rank - right.rank);
 
   let currentMatches = [];
-  let dismissed = false;
+  let visible = false;
 
+  hideShell();
   input.addEventListener("input", handleInput);
   input.addEventListener("keydown", handleKeydown);
   document.addEventListener("click", handleDocumentClick);
-  closeButton?.addEventListener("click", dismiss);
+  closeButton?.addEventListener("click", hideSearch);
   closeButton?.addEventListener("keydown", handleCloseButtonKeydown);
+  window.addEventListener("keydown", handleGlobalKeydown);
+
+  function handleGlobalKeydown(event) {
+    const isSlash = event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey;
+    const isCtrlF = event.key === "f" && (event.ctrlKey || event.metaKey) && !event.altKey;
+    const isCtrlX = event.key === "x" && (event.ctrlKey || event.metaKey) && !event.altKey;
+    if (isCtrlX && visible) {
+      event.preventDefault();
+      hideSearch();
+      return;
+    }
+    if (isSlash || isCtrlF) {
+      const activeElement = document.activeElement;
+      const tag = activeElement?.tagName;
+      const isEditingField =
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        activeElement?.isContentEditable;
+      if (isEditingField) {
+        if (activeElement === input && isSlash) {
+          event.preventDefault();
+          hideSearch();
+        }
+        return;
+      }
+      event.preventDefault();
+      if (visible) {
+        hideSearch();
+      } else {
+        showShell();
+        input.focus();
+      }
+    }
+  }
 
   function handleInput() {
-    if (dismissed) {
+    if (!visible) {
       return;
     }
     const query = input.value.trim().toLowerCase();
@@ -49,12 +85,15 @@ export function createSearch({
   }
 
   function handleKeydown(event) {
-    if (dismissed) {
+    if (!visible) {
+      return;
+    }
+    if (event.code === "Space") {
+      event.stopPropagation();
       return;
     }
     if (event.key === "Escape") {
-      close();
-      input.blur();
+      hideSearch();
       return;
     }
 
@@ -65,7 +104,7 @@ export function createSearch({
   }
 
   function handleDocumentClick(event) {
-    if (dismissed) {
+    if (!visible) {
       return;
     }
     if (
@@ -78,22 +117,18 @@ export function createSearch({
     close();
   }
 
-  function dismiss(event) {
-    if (dismissed) {
-      return;
-    }
+  function hideSearch(event) {
     event?.preventDefault();
     event?.stopPropagation();
     close();
     input.blur();
-    dismissed = true;
-    teardown();
+    document.body.focus();
     hideShell();
   }
 
   function handleCloseButtonKeydown(event) {
     if (event.key === "Enter" || event.key === " ") {
-      dismiss(event);
+      hideSearch(event);
     }
   }
 
@@ -137,14 +172,6 @@ export function createSearch({
     currentMatches = [];
   }
 
-  function teardown() {
-    input.removeEventListener("input", handleInput);
-    input.removeEventListener("keydown", handleKeydown);
-    document.removeEventListener("click", handleDocumentClick);
-    closeButton?.removeEventListener("click", dismiss);
-    closeButton?.removeEventListener("keydown", handleCloseButtonKeydown);
-  }
-
   return {
     setValue(value) {
       input.value = value;
@@ -155,14 +182,21 @@ export function createSearch({
     },
   };
 
+  function showShell() {
+    if (!shell) {
+      return;
+    }
+    visible = true;
+    shell.classList.remove("is-hidden");
+    shell.removeAttribute("aria-hidden");
+  }
+
   function hideShell() {
     if (!shell) {
       return;
     }
+    visible = false;
     shell.classList.add("is-hidden");
     shell.setAttribute("aria-hidden", "true");
-    window.setTimeout(() => {
-      shell.remove();
-    }, 220);
   }
 }
