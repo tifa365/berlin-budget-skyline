@@ -1,6 +1,6 @@
 import { APP_CONFIG } from "./config.js";
 import { buildCityModel } from "./core/city-data.js";
-import { createCameraController } from "./core/camera-controller.js?v=vice-intro-1";
+import { createCameraController } from "./core/camera-controller.js?v=park-intro-restore-1";
 import {
   formatAmount,
   formatInteger,
@@ -77,7 +77,6 @@ requestAnimationFrame(() => {
       (building) => building.title === "Wednesday (Fernsehserie)",
     ) || null;
     const introBuilding = gtaViceBuilding || wednesdayBuilding || batmanBuilding;
-    const introView = gtaViceBuilding ? createViceIntroView(gtaViceBuilding) : null;
     let batmanModel = null;
     let batmanSelectionOutline = null;
     let viceSignModel = null;
@@ -119,11 +118,7 @@ requestAnimationFrame(() => {
       camera: sceneState.camera,
       domElement: sceneState.renderer.domElement,
     });
-    if (introView) {
-      cameraController.startAtView(introView);
-    } else {
-      cameraController.startAtBuilding(introBuilding);
-    }
+    cameraController.startAtBuilding(introBuilding);
 
     const inspector = createInspector(
       {

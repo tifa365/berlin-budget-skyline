@@ -216,7 +216,17 @@ export function createCameraController({ camera, domElement }) {
   }
 
   function startAtBuilding(building) {
-    startAtView(getBuildingView(building));
+    // Restore the original intro flyover: it always settles into the park orbit.
+    flyoverActive = true;
+    flyoverT = 0;
+    flyoverEndView = null;
+
+    const startPos = flyoverCurve.getPoint(0);
+    const startLook = flyoverLookCurve.getPoint(0);
+    camera.position.copy(startPos);
+    camera.lookAt(startLook);
+    target.copy(startLook);
+    targetGoal.copy(startLook);
   }
 
   function startAtView(view) {
