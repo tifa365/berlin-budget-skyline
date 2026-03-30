@@ -6,6 +6,10 @@ This repo now runs a trimmed Three.js explorer that maps Berlin budget items int
 
 https://tifa365.github.io/berlin-budget-skyline/
 
+## Data Source
+
+This project is closely related to [`tifa365/lod-budget`](https://github.com/tifa365/lod-budget), the Berlin budget Linked Open Data repository. That repository contains the RDF / LOD dataset, data-conversion tooling, and static-site pipeline for the official Berlin budget data covering 2022–2027. `berlin-budget-city` / Berlin Budget Skyline is the visualization layer: it turns that budget material into an explorable Three.js skyline interface.
+
 ## Structure
 
 - `index.html`: the app shell and overlay UI.
