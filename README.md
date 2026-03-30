@@ -2,6 +2,10 @@
 
 This repo now runs a trimmed Three.js explorer that maps Berlin budget items into a city skyline.
 
+## Live
+
+https://tifa365.github.io/berlin-budget-skyline/
+
 ## Structure
 
 - `index.html`: the app shell and overlay UI.
