@@ -48,6 +48,33 @@
 
     <button id="musicBtn" class="music-btn" type="button" aria-label="Toggle music" title="Toggle music">🔊</button>
     <button id="skylineBtn" class="skyline-btn" type="button" aria-label="Watch the skyline" title="Watch the skyline">🏙️</button>
+    <button id="infoBtn" class="info-btn" type="button" aria-label="About this project" title="About this project">i</button>
+    <div id="infoPopup" class="info-popup" hidden>
+      <div class="info-popup__content">
+        <button id="closeInfo" class="info-popup__close" type="button" aria-label="Close project info">×</button>
+        <h2 class="info-popup__title">About Berlin Budget City</h2>
+        <p>Berlin Budget City turns Berlin budget lines into a navigable skyline. Each building represents one budget item from the Berlin budget dataset, with height and volume driven by the mapped values.</p>
+        <h3>Controls</h3>
+        <ul>
+          <li><strong>Click + drag</strong> to rotate the camera</li>
+          <li><strong>Scroll</strong> to zoom</li>
+          <li><strong>Click a building</strong> to inspect it</li>
+          <li><strong>Space</strong> to pause or resume rotation and music</li>
+          <li><strong>/</strong> or <strong>Ctrl+F</strong> to open search and filters</li>
+          <li><strong>Ctrl+X</strong> or <strong>Esc</strong> to close search</li>
+        </ul>
+        <h3>Data</h3>
+        <p>The runtime dataset is generated from Berlin budget source data and linked back to the public Berlin budget visualisation for each selected item.</p>
+        <h3>Credits</h3>
+        <p>This Berlin budget variant builds on the same Three.js city-explorer foundation used in the related WikiCity work, but swaps the content layer to Berlin budget data.</p>
+        <ul>
+          <li><a href="https://haushaltsdaten.odis-berlin.de/visualisierung/" target="_blank" rel="noopener">Berlin budget visualisation</a></li>
+          <li><a href="https://threejs.org" target="_blank" rel="noopener">Three.js</a></li>
+          <li><a href="https://sketchfab.com/3d-models/lego-batman-3d-model-from-the-lego-batman-fe0de34081854108b3899bbcc4c42b4b" target="_blank" rel="noopener">"Lego Batman 3D Model"</a> by <a href="https://sketchfab.com/dankmememe" target="_blank" rel="noopener">Lego Mania</a> under <a href="http://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC-BY-4.0</a></li>
+          <li><a href="https://sketchfab.com/3d-models/vice-12bdaeb08a1844b4906e68ef7b884ad4" target="_blank" rel="noopener">"VICE"</a> by <a href="https://sketchfab.com/OvertikStudio" target="_blank" rel="noopener">Overtik Studio</a> under <a href="http://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC-BY-4.0</a></li>
+        </ul>
+      </div>
+    </div>
     <div id="tooltip" class="tooltip" role="status" aria-live="polite"></div>
 
     <aside id="inspector" class="inspector" aria-label="Budget item details">
@@ -124,6 +151,19 @@
         btn.style.pointerEvents = "none";
       });
       go();
+      window._bgMusic = m;
+    })();
+    (function() {
+      var popup = document.getElementById("infoPopup");
+      document.getElementById("infoBtn").addEventListener("click", function() {
+        popup.hidden = false;
+      });
+      document.getElementById("closeInfo").addEventListener("click", function() {
+        popup.hidden = true;
+      });
+      popup.addEventListener("click", function(e) {
+        if (e.target === popup) popup.hidden = true;
+      });
     })();
   </script>
 </body>

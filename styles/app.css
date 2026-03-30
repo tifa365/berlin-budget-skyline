@@ -582,6 +582,102 @@ input {
 }
 
 .skyline-btn:hover {
+
+.info-btn {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(9, 20, 36, 0.92);
+  color: var(--accent-strong);
+  font-family: "Silkscreen", monospace;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+.info-btn:hover,
+.info-btn:focus-visible {
+  background: var(--bg-soft);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(3, 8, 15, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.info-popup[hidden] {
+  display: none;
+}
+
+.info-popup__content {
+  position: relative;
+  width: min(34rem, calc(100vw - 3rem));
+  max-height: min(80vh, 44rem);
+  overflow: auto;
+  padding: 1.35rem 1.35rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: 1.2rem;
+  background: linear-gradient(180deg, rgba(9, 20, 36, 0.97), rgba(9, 20, 36, 0.9));
+  box-shadow: var(--shadow);
+}
+
+.info-popup__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.8rem;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.info-popup__title {
+  margin: 0 2rem 0.8rem 0;
+  font-size: 1.35rem;
+}
+
+.info-popup__content h3 {
+  margin: 1rem 0 0.32rem;
+  color: var(--accent);
+  font-size: 0.95rem;
+}
+
+.info-popup__content p,
+.info-popup__content li {
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.info-popup__content p {
+  margin: 0;
+}
+
+.info-popup__content ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.2rem;
+}
+
   background: var(--bg-soft);
   border-color: var(--border-strong);
 }
