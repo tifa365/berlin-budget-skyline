@@ -3,7 +3,6 @@ import { buildCityModel } from "./core/city-data.js";
 import { createCameraController } from "./core/camera-controller.js?v=park-intro-restore-1";
 import {
   formatAmount,
-  formatInteger,
 } from "./core/formatting.js";
 import { createScene } from "./core/scene.js";
 import { createCarLights } from "./core/car-lights.js";
@@ -65,6 +64,7 @@ requestAnimationFrame(() => {
     const park = createPark(sceneState.scene, model);
     const batmanSound = new window.Audio(BATMAN_SOUND_URL);
     batmanSound.preload = "auto";
+    batmanSound.volume = 0.5;
 
     const batmanBuilding = model.buildings.reduce(
       (tallest, building) => (building.height > tallest.height ? building : tallest),
@@ -131,6 +131,9 @@ requestAnimationFrame(() => {
     cameraController.onFlyoverEnd(() => {
       if (introHintShow) {
         clearTimeout(introHintShow);
+        introHintShow = null;
+      }
+    });
     cameraController.onAutoRotateStart(() => {
       const hint = document.createElement("div");
       hint.className = "space-hint";
@@ -141,9 +144,6 @@ requestAnimationFrame(() => {
         hint.classList.remove("is-visible");
         hint.addEventListener("transitionend", () => hint.remove(), { once: true });
       }, 4000);
-    });
-        introHintShow = null;
-      }
     });
 
     const inspector = createInspector(
@@ -201,7 +201,7 @@ requestAnimationFrame(() => {
     let lastPointerType = "mouse";
     let previewController = null;
     let previewRequestId = 0;
-    let pendingBatmanSound = null;
+    let batmanSoundTimeoutId = null;
 
     sceneState.renderer.domElement.addEventListener("pointermove", (event) => {
       lastPointerType = event.pointerType || "mouse";
@@ -354,13 +354,11 @@ requestAnimationFrame(() => {
     }
 
     function queueBatmanSound() {
-      pendingBatmanSound = {
-        deadline: performance.now() + 2600,
-      };
-    }
-
-    function cancelBatmanSound() {
-      pendingBatmanSound = null;
+      cancelBatmanSound();
+      batmanSoundTimeoutId = window.setTimeout(() => {
+        batmanSoundTimeoutId = null;
+        playBatmanSound();
+      }, 400);
     }
 
     function selectBatman() {
@@ -373,6 +371,14 @@ requestAnimationFrame(() => {
       if (batmanSelectionOutline) {
         batmanSelectionOutline.visible = false;
       }
+    }
+
+    function cancelBatmanSound() {
+      if (batmanSoundTimeoutId === null) {
+        return;
+      }
+      window.clearTimeout(batmanSoundTimeoutId);
+      batmanSoundTimeoutId = null;
     }
 
     function selectViceSign() {
@@ -542,10 +548,6 @@ requestAnimationFrame(() => {
       }
 
       cameraController.update(deltaSeconds);
-      if (pendingBatmanSound && (cameraController.isSettled() || now >= pendingBatmanSound.deadline)) {
-        playBatmanSound();
-        pendingBatmanSound = null;
-      }
       city.update(now / 1000, sceneState.camera);
       carLights.update(now / 1000);
       sceneState.update(now / 1000);
