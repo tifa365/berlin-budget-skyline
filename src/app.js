@@ -119,6 +119,21 @@ requestAnimationFrame(() => {
       domElement: sceneState.renderer.domElement,
     });
     cameraController.startAtBuilding(introBuilding);
+    let introHintShow = setTimeout(() => {
+      introHintShow = null;
+      skylineBtn.classList.add("is-visible");
+    }, 8000);
+    const introHintHide = setTimeout(() => {
+      if (selectedIndex < 0) {
+        skylineBtn.classList.remove("is-visible");
+      }
+    }, 14000);
+    cameraController.onFlyoverEnd(() => {
+      if (introHintShow) {
+        clearTimeout(introHintShow);
+        introHintShow = null;
+      }
+    });
 
     const inspector = createInspector(
       {
@@ -528,6 +543,7 @@ requestAnimationFrame(() => {
     }
 
     skylineBtn.addEventListener("click", () => {
+      window.clearTimeout(introHintHide);
       cameraController.viewSkyline();
       skylineBtn.classList.remove("is-visible");
     });

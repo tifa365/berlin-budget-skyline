@@ -50,6 +50,7 @@ export function createCameraController({ camera, domElement }) {
 
   domElement.addEventListener("pointerdown", onPointerDown);
   window.addEventListener("pointermove", onPointerMove);
+  let flyoverEndCallback = null;
   window.addEventListener("pointerup", onPointerUp);
   domElement.addEventListener("wheel", onWheel, { passive: true });
 
@@ -177,6 +178,13 @@ export function createCameraController({ camera, domElement }) {
       const pos = flyoverCurve.getPoint(eased);
       const look = flyoverLookCurve.getPoint(eased);
       if (flyoverEndView) {
+    if (flyoverEndCallback) {
+      const callback = flyoverEndCallback;
+      flyoverEndCallback = null;
+      try {
+        callback();
+      } catch (_) {}
+    }
         const view = flyoverEndView;
         const blend = smoothstep(0.62, 1, eased);
         pos.lerp(view.position, blend);
@@ -362,7 +370,14 @@ function smoothstep(edge0, edge1, value) {
   const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
   return t * t * (3 - 2 * t);
 }
+    if (flyoverActive) {
+      flyoverActive = false;
+      settleAfterFlyover();
+    }
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
+    onFlyoverEnd(callback) {
+      flyoverEndCallback = callback;
+    },
