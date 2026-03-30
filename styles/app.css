@@ -271,7 +271,6 @@ input {
   font-size: 0.78rem;
 }
 
-.article-link,
 .neighbor-list button {
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -281,7 +280,6 @@ input {
   transition: border-color 140ms ease, transform 140ms ease, background 140ms ease;
 }
 
-.article-link:hover,
 .neighbor-list button:hover {
   border-color: var(--border-strong);
   transform: translateY(-1px);
@@ -442,7 +440,22 @@ input {
   justify-content: center;
   width: 100%;
   padding: 0.9rem 1rem;
+  border: 1px solid rgba(255, 209, 102, 0.58);
+  border-radius: 0.95rem;
+  background: linear-gradient(180deg, #ffd166 0%, #ffb347 100%);
+  color: #08111f;
+  font-weight: 800;
+  letter-spacing: 0.01em;
   text-decoration: none;
+  box-shadow: 0 14px 28px rgba(255, 179, 71, 0.22);
+  transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+}
+
+.article-link:hover,
+.article-link:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 34px rgba(255, 179, 71, 0.32);
+  filter: brightness(1.03);
 }
 
 .neighbors {
