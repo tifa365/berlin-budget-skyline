@@ -17,6 +17,12 @@ export function formatAmount(value, { compact = false } = {}) {
   return compact ? amountCompactFormatter.format(value) : amountFormatter.format(value);
 }
 
+// Compatibility export for any stale cached module graph that still asks for
+// the old wiki-oriented helper name.
+export function formatViews(value, options = {}) {
+  return formatAmount(value, options);
+}
+
 export function formatInteger(value) {
   return integerFormatter.format(value);
 }
