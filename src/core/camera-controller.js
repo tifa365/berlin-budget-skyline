@@ -21,6 +21,9 @@ export function createCameraController({ camera, domElement }) {
   let lastPointerY = 0;
   let idleSeconds = 0;
   let lerpSpeed = 0.07;
+  let autoRotatePaused = false;
+  let autoRotateStarted = false;
+  let autoRotateStartCallback = null;
 
   // ═══ CINEMATIC FLYOVER ═══
   let flyoverActive = false;
@@ -47,12 +50,13 @@ export function createCameraController({ camera, domElement }) {
   ]);
 
   let flyoverEndView = null;
+  let flyoverEndCallback = null;
 
   domElement.addEventListener("pointerdown", onPointerDown);
   window.addEventListener("pointermove", onPointerMove);
-  let flyoverEndCallback = null;
   window.addEventListener("pointerup", onPointerUp);
   domElement.addEventListener("wheel", onWheel, { passive: true });
+  window.addEventListener("keydown", onKeyDown);
 
   function onPointerDown(event) {
     if (event.button !== undefined && event.button !== 0) {
@@ -128,7 +132,58 @@ export function createCameraController({ camera, domElement }) {
     idleSeconds = 0;
   }
 
+  function onKeyDown(event) {
+    if (event.code !== "Space" || event.repeat || flyoverActive) {
+      return;
+    }
+
+    const targetTag = event.target?.tagName;
+    const isInteractiveTarget =
+      targetTag === "INPUT" ||
+      targetTag === "TEXTAREA" ||
+      targetTag === "SELECT" ||
+      targetTag === "BUTTON" ||
+      event.target?.isContentEditable;
+    if (isInteractiveTarget) {
+      return;
+    }
+
+    event.preventDefault();
+    autoRotatePaused = !autoRotatePaused;
+    if (autoRotatePaused) {
+      targetTheta = theta;
+    }
+
+    const music = window._bgMusic;
+    if (music) {
+      if (autoRotatePaused) {
+        music.pause();
+      } else {
+        music.play().catch(() => {});
+      }
+    }
+
+    const musicBtn = document.getElementById("musicBtn");
+    if (!musicBtn) {
+      return;
+    }
+    if (autoRotatePaused) {
+      musicBtn.style.opacity = "0";
+      musicBtn.style.pointerEvents = "none";
+      return;
+    }
+    musicBtn.style.opacity = "1";
+    musicBtn.style.pointerEvents = "auto";
+  }
+
   function settleAfterFlyover() {
+    if (flyoverEndCallback) {
+      const callback = flyoverEndCallback;
+      flyoverEndCallback = null;
+      try {
+        callback();
+      } catch (_) {}
+    }
     if (flyoverEndView) {
       const view = flyoverEndView;
       flyoverEndView = null;
@@ -178,13 +233,6 @@ export function createCameraController({ camera, domElement }) {
       const pos = flyoverCurve.getPoint(eased);
       const look = flyoverLookCurve.getPoint(eased);
       if (flyoverEndView) {
-    if (flyoverEndCallback) {
-      const callback = flyoverEndCallback;
-      flyoverEndCallback = null;
-      try {
-        callback();
-      } catch (_) {}
-    }
         const view = flyoverEndView;
         const blend = smoothstep(0.62, 1, eased);
         pos.lerp(view.position, blend);
@@ -203,7 +251,15 @@ export function createCameraController({ camera, domElement }) {
     }
 
     idleSeconds += deltaSeconds;
-    if (!dragging && idleSeconds > 4) {
+    if (!dragging && !autoRotatePaused && idleSeconds > 4) {
+      if (!autoRotateStarted) {
+        autoRotateStarted = true;
+        if (autoRotateStartCallback) {
+          try {
+            autoRotateStartCallback();
+          } catch (_) {}
+        }
+      }
       const rotateSpeed = Math.min(0.022 * (CAMERA_CONFIG.distance / distance), 0.04);
       targetTheta -= deltaSeconds * rotateSpeed;
     }
@@ -270,6 +326,8 @@ export function createCameraController({ camera, domElement }) {
       flyoverActive = false;
       settleAfterFlyover();
     }
+    dragging = false;
+    activePointerId = null;
     targetGoal.copy(nextTarget);
     targetDistance = nextDistance;
     if (typeof nextPhi === "number") {
@@ -304,6 +362,10 @@ export function createCameraController({ camera, domElement }) {
   }
 
   function viewSkyline() {
+    if (flyoverActive) {
+      flyoverActive = false;
+      settleAfterFlyover();
+    }
     targetGoal.set(0, 90, 0);
     targetDistance = 100;
     targetPhi = 2.0;
@@ -332,6 +394,12 @@ export function createCameraController({ camera, domElement }) {
     isSettled,
     isDragging: () => dragging,
     movedSinceDown: () => movedSinceDown,
+    onFlyoverEnd(callback) {
+      flyoverEndCallback = callback;
+    },
+    onAutoRotateStart(callback) {
+      autoRotateStartCallback = callback;
+    },
   };
 }
 
@@ -370,14 +438,7 @@ function smoothstep(edge0, edge1, value) {
   const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
   return t * t * (3 - 2 * t);
 }
-    if (flyoverActive) {
-      flyoverActive = false;
-      settleAfterFlyover();
-    }
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
-    onFlyoverEnd(callback) {
-      flyoverEndCallback = callback;
-    },

@@ -131,6 +131,17 @@ requestAnimationFrame(() => {
     cameraController.onFlyoverEnd(() => {
       if (introHintShow) {
         clearTimeout(introHintShow);
+    cameraController.onAutoRotateStart(() => {
+      const hint = document.createElement("div");
+      hint.className = "space-hint";
+      hint.textContent = "Press SPACE to pause rotation";
+      document.getElementById("app").appendChild(hint);
+      requestAnimationFrame(() => hint.classList.add("is-visible"));
+      window.setTimeout(() => {
+        hint.classList.remove("is-visible");
+        hint.addEventListener("transitionend", () => hint.remove(), { once: true });
+      }, 4000);
+    });
         introHintShow = null;
       }
     });

@@ -582,6 +582,9 @@ input {
 }
 
 .skyline-btn:hover {
+  background: var(--bg-soft);
+  border-color: var(--border-strong);
+}
 
 .info-btn {
   position: fixed;
@@ -678,6 +681,32 @@ input {
   padding-left: 1.2rem;
 }
 
-  background: var(--bg-soft);
-  border-color: var(--border-strong);
+.info-popup__content li + li {
+  margin-top: 0.2rem;
+}
+
+.info-popup__content a {
+  color: var(--accent);
+}
+
+.space-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 4rem;
+  z-index: 50;
+  padding: 0.65rem 1.1rem;
+  border: 1px solid rgba(127, 211, 255, 0.16);
+  border-radius: 0.85rem;
+  background: rgba(7, 16, 30, 0.92);
+  color: var(--muted);
+  font-size: 0.84rem;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-50%);
+  transition: opacity 0.4s ease;
+  box-shadow: var(--shadow);
+}
+
+.space-hint.is-visible {
+  opacity: 1;
 }
